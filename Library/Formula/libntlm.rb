@@ -1,20 +1,22 @@
 class Libntlm < Formula
   desc "Implements Microsoft's NTLM authentication"
-  homepage "http://www.nongnu.org/libntlm/"
-  url "http://www.nongnu.org/libntlm/releases/libntlm-1.4.tar.gz"
-  sha256 "8415d75e31d3135dc7062787eaf4119b984d50f86f0d004b964cdc18a3182589"
+  version "1.7"
+  homepage "https://gitlab.com/gsasl/libntlm/"
+  url "https://gitlab.com/gsasl/libntlm/-/archive/v1.7/libntlm-v1.7.tar.bz2"
+  sha256 "fa1c12c699f71d906b6880981cadba358e5b2e62e3d18424eaa47fa1bd9e918f"
 
-  bottle do
-    cellar :any
-    revision 1
-    sha1 "7c5f98bf311289a1aa49c08a5d2fa23ffb3fcc30" => :yosemite
-    sha1 "550250645169374bf9275ff3e8c8f805560f3416" => :mavericks
-    sha1 "a417f1bd4b1403094dddc8406d1f390832dabf53" => :mountain_lion
+  depends_on "autoconf" => :build
+  depends_on "git" => :build
+  depends_on "m4" => :build
+
+  def caveats
+    <<-EOS.undent
+      The NTLM protocol is quite weakly encrypted.  Libntlm should only be used for
+      interoperability, never for security.
+    EOS
   end
 
   def install
-    system "./configure", "--disable-dependency-tracking",
-                          "--prefix=#{prefix}"
-    system "make", "install"
+    system "./bootstrap"
   end
 end

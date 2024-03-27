@@ -225,9 +225,14 @@ module Superenv
       Hardware::CPU.optimization_flags.fetch(Hardware.oldest_cpu)
     elsif compiler == :clang
       "-march=native"
-    # This is mutated elsewhere, so return an empty string in this case
+    # # This is mutated elsewhere, so return an empty string in this case
+    # else
+    #   ""
+    # ...that "elsewhere" appears to not yet exist, so, optimize here:
     else
-      ""
+      target_CPU = Hardware::CPU.family
+      target_CPU = :g5 if target_CPU = :g5_64
+      Hardware::CPU.optimization_flags.fetch(target_CPU)
     end
   end
 
@@ -265,6 +270,7 @@ module Superenv
   end
 
   def universal_binary
+    permit_arch_flags
     self["HOMEBREW_ARCHFLAGS"] = Hardware::CPU.universal_archs.as_arch_flags
 
     # GCC doesn't accept "-march" for a 32-bit CPU with "-arch x86_64"
@@ -293,7 +299,7 @@ module Superenv
     when "clang"
       append "HOMEBREW_CCCFG", "x", ""
       append "HOMEBREW_CCCFG", "g", ""
-    when /gcc-(4\.(8|9)|5)/
+    when GNU_GXX11_REGEXP
       append "HOMEBREW_CCCFG", "x", ""
     else
       raise "The selected compiler doesn't support C++11: #{homebrew_cc}"

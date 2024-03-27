@@ -11,34 +11,43 @@ class Curl < Formula
 
   keg_only :provided_by_osx
 
-  option "with-rtmpdump", "Build with RTMP support"
-  option "with-libssh2", "Build with scp and sftp support"
-  option "with-c-ares", "Build with C-Ares async DNS support"
-  option "with-gssapi", "Build with GSSAPI/Kerberos authentication support."
+  option "with-c-ares",   "Build with C-ARES asynchronous DNS support"
+  option "with-gsasl",    "Build with SASL authentication support"
   option "with-libressl", "Build with LibreSSL instead of Secure Transport or OpenSSL"
+  option "with-libssh2",  "Build with scp and sFTP support"
+  option "with-rtmpdump", "Build with RTMP support"
+  option "with-zstd",     "Build with ZStandard compression support"
 
+  deprecated_option "with-ares" => "with-c-ares"
   deprecated_option "with-rtmp" => "with-rtmpdump"
   deprecated_option "with-ssh" => "with-libssh2"
-  deprecated_option "with-ares" => "with-c-ares"
+
+  depends_on "c-ares"   => :optional
+  depends_on "gsasl"    => :optional
+  depends_on "libressl" => :optional
+  depends_on "libssh2"  => :optional
+  depends_on "rtmpdump" => :optional
+  depends_on "zstd"     => :optional
 
   if (build.without?("libressl"))
     depends_on "openssl3"
   end
 
   depends_on "pkg-config" => :build
-  depends_on "rtmpdump" => :optional
-  depends_on "libssh2" => :optional
-  depends_on "c-ares" => :optional
-  depends_on "libressl" => :optional
   depends_on "libnghttp2"
   depends_on "zlib"
 
   def install
+    # can’t do --enable-ech yet because waiting on standards process
+    # no --enable-websockets because is experimental
+    # no SSPI because is a, *spit*, Windows thing
+    # TODO:  HTTP/3 -- needs one of four optional prerequisite packages
     args = %W[
-      --disable-debug
+      --prefix=#{prefix}
       --disable-dependency-tracking
       --disable-silent-rules
-      --prefix=#{prefix}
+      --disable-debug
+      --with-gssapi
       --with-zlib=#{Formula["zlib"].opt_prefix}
     ]
 
@@ -55,15 +64,9 @@ class Curl < Formula
       args << "--with-ca-bundle=#{etc}/openssl@3/cert.pem"
     end
 
+    args << (build.with?("c-ares") ? "--enable-ares=#{Formula["c-ares"].opt_prefix}" : "--disable-ares")
     args << (build.with?("libssh2") ? "--with-libssh2" : "--without-libssh2")
-    args << (build.with?("gssapi") ? "--with-gssapi" : "--without-gssapi")
     args << (build.with?("rtmpdump") ? "--with-librtmp" : "--without-librtmp")
-
-    if build.with? "c-ares"
-      args << "--enable-ares=#{Formula["c-ares"].opt_prefix}"
-    else
-      args << "--disable-ares"
-    end
 
     # Tiger/Leopard ship with a horrendously outdated set of certs,
     # breaking any software that relies on curl, e.g. git

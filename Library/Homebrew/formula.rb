@@ -949,18 +949,6 @@ class Formula
     ]
   end
 
-  # Returns the path to a make 3.81 or newer binary.
-  # Returns the system make on Leopard and newer, and the
-  # path to the actually-installed make on Tiger or older.
-  def make_path
-    if MacOS.version > :tiger
-      "/usr/bin/make"
-    else
-      make = Formula["make"].opt_bin/"make"
-      make.exist? ? make.to_s : (Formula["make"].opt_bin/"gmake").to_s
-    end
-  end
-
   # an array of all core {Formula} names
   # @private
   def self.core_names

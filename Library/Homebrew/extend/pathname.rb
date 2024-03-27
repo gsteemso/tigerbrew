@@ -93,12 +93,20 @@ class Pathname
     open("w", *open_args) { |f| f.write(content) }
   end
 
-  def binwrite(contents, *open_args)
-    open("wb", *open_args) { |f| f.write(contents) }
+  # this function does not exist even in Ruby 2.0
+  def binwrite(datum, offset = 0)
+    self.open('r+b') do |f|
+      f.pos = offset
+      f.write(datum)
+    end
   end unless method_defined?(:binwrite)
 
-  def binread(*open_args)
-    open("rb", *open_args) { |f| f.read }
+  # this function does not exist in Leopard stock Ruby 1.8.6
+  def binread(length = self.size, offset = 0)
+    self.open('rb') do |f|
+      f.pos = offset
+      f.read(length)
+    end
   end unless method_defined?(:binread)
 
   # NOTE always overwrites

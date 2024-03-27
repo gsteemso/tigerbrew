@@ -75,18 +75,20 @@ class Openssl < Formula
         dirs << dir
         mkdir dir
         mkdir "#{dir}/engines"
-        system "make", "clean"
       end
 
       ENV.deparallelize
       system "perl", "./Configure", *(configure_args + arch_args[arch])
+
+      system "make", "clean" if build.universal?
+
       system "make", "depend"
       system "make"
       system "make", "test" if build.with?("test")
 
       if build.universal?
         cp "include/openssl/opensslconf.h", dir
-        cp Dir["*.?.?.?.dylib"] + Dir["*.a"] + "apps/openssl", dir
+        cp Dir["*.dylib"] + Dir["*.a"] + ["apps/openssl"], dir
         cp Dir["engines/**/*.dylib"], "#{dir}/engines"
       end
     end
@@ -103,6 +105,7 @@ class Openssl < Formula
                        "-output", "#{lib}/#{libname}.a"
       end
 
+      mkdir lib/"engines"
       Dir.glob("#{dirs.first}/engines/*.dylib") do |engine|
         libname = File.basename(engine)
         system "lipo", "-create", "#{dirs.first}/engines/#{libname}",

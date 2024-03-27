@@ -1,10 +1,15 @@
 class Gsasl < Formula
-  desc "SASL library command-line interface"
+  desc "Simple Authentication and Security Layer library command-line interface"
   homepage "https://www.gnu.org/software/gsasl/"
   url "http://ftpmirror.gnu.org/gsasl/gsasl-1.8.0.tar.gz"
   mirror "https://ftp.gnu.org/gsasl/gsasl-1.8.0.tar.gz"
   sha256 "310262d1ded082d1ceefc52d6dad265c1decae8d84e12b5947d9b1dd193191e5"
 
+  option "with-gnutls",  "Build with STARTTLS support"
+  depends_on "gnutls"  => :optional
+  option "with-libidn",  "Build with IDN StringPrep"
+  depends_on "libidn"  => :optional
+  option "with-libntlm", "Interoperate with some versions of Windows"
   depends_on "libntlm" => :optional
 
   bottle do
@@ -17,9 +22,13 @@ class Gsasl < Formula
   end
 
   def install
-    system "./configure", "--disable-dependency-tracking",
-                          "--with-gssapi-impl=mit",
-                          "--prefix=#{prefix}"
+    args = %W[
+      --prefix=#{prefix}
+      --disable-dependency-tracking
+      --with-gssapi-impl=mit
+    ]
+
+    system "./configure", *args
     system "make", "install"
   end
 

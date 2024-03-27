@@ -1,44 +1,185 @@
 class Icu4c < Formula
   desc "C/C++ and Java libraries for Unicode and globalization"
-  homepage "http://site.icu-project.org/"
-  head "https://github.com/unicode-org/icu.git"
-  url "https://downloads.sourceforge.net/project/icu/ICU4C/55.1/icu4c-55_1-src.tgz"
-  mirror "https://ftp.osuosl.org/pub/blfs/conglomeration/icu/icu4c-55_1-src.tgz"
-  version "55.1"
-  sha256 "e16b22cbefdd354bec114541f7849a12f8fc2015320ca5282ee4fd787571457b"
-
-  bottle do
-    sha256 "11625fd5a49ecdc8d653b707db778d32eb1e7cf6cee04108822a7615289e7411" => :el_capitan
-    sha256 "a27e2b3645992acec22c95cb6ff4c4893139d3710c1a0be6d54c9f22593fc148" => :yosemite
-    sha256 "c68728ae3a0401fb32ddb3a85eb5ddf8c367268090421d66db2631d49f7b1ce1" => :mavericks
-    sha256 "be4ecad0c4f0542df384dd48c8c57380f6d843958c5d1eddb068e52f910e2dd9" => :mountain_lion
-  end
-
-  # build tries to pass -compatibility-version to ld, which Tiger's ld can't grok
-  depends_on :ld64
+  homepage "https://icu.unicode.org/"
+  url "https://github.com/unicode-org/icu/releases/download/release-56-2/icu4c-56_2-src.tgz"
+  version "56.2"
+  sha256 "187faf495133f4cffa22d626896e7288f43d342e6af5eb8b214a1bf37bad51a6"
 
   keg_only :provided_by_osx, "OS X provides libicucore.dylib (but nothing else)."
 
-  option :universal
   option :cxx11
+  option :universal
 
-  # patch submitted upstream: http://bugs.icu-project.org/trac/ticket/9367
-  # See also https://github.com/mistydemeo/tigerbrew/pull/467
-  patch :DATA if MacOS.version < :leopard
+  # build tries to pass -compatibility_version to ld, which Tiger's ld can't grok
+  depends_on :ld64 if MacOS.version < :leopard
+
+  # These are nearly identical patches as were submitted upstream regarding ICU4C 55.1.
+  patch :p0, :DATA
 
   def install
     ENV.universal_binary if build.universal?
+
     # Tiger's libtool chokes if it's passed -w
     ENV.enable_warnings if MacOS.version < :leopard
 
-    ENV.cxx11 if build.cxx11?
+    args = %W[
+      --prefix=#{prefix}
+      --disable-dependency-tracking
+      --disable-samples
+      --enable-static
+      --with-data-packaging=archive
+    ]
+    # "data-packaging=archive" per recommendations in the package for building a system library
 
-    args = ["--prefix=#{prefix}", "--disable-samples", "--disable-tests", "--enable-static"]
     args << "--with-library-bits=64" if MacOS.prefer_64_bit?
+
+    # Per the instructions in the package, when building a system library these should be set:
+    ENV["CPPFLAGS"] = "-DU_CHARSET_IS_UTF8=1 -DU_DISABLE_RENAMING=1"
+    # Some of those could also be done by arguments to runConfigureICU, but that method elicits
+    # irritating and unhelpful usage warnings.
+
     cd "source" do
-      system "./configure", *args
+      system "./runConfigureICU", "MacOSX", *args
       system "make"
+      system "make", "check"
       system "make", "install"
+    end
+
+    # Per the instructions in the package:  Ideally, the C++-specific header files – which are not
+    # distinctively named, but in many cases contain a comment that includes “\brief C++ API” –
+    # ought to not be installed when the rest of them are.  Don't know how to arrange that except
+    # by individually deleting members of a hand-assembled list from `include`.
+    cxxheaders = %w[
+      layout/LayoutEngine.h
+      layout/LEFontInstance.h
+      layout/LEGlyphFilter.h
+      layout/LEGlyphStorage.h
+      layout/LEInsertionList.h
+      layout/LELanguages.h
+      layout/LEScripts.h
+      layout/LESwaps.h
+      layout/LETableReference.h
+      layout/ParagraphLayout.h
+      layout/RunArrays.h
+      unicode/alphaindex.h
+      unicode/appendable.h
+      unicode/basictz.h
+      unicode/brkiter.h
+      unicode/bytestream.h
+      unicode/bytestrie.h
+      unicode/bytestriebuilder.h
+      unicode/calendar.h
+      unicode/caniter.h
+      unicode/chariter.h
+      unicode/choicfmt.h
+      unicode/coleitr.h
+      unicode/coll.h
+      unicode/compactdecimalformat.h
+      unicode/curramt.h
+      unicode/currpinf.h
+      unicode/currunit.h
+      unicode/datefmt.h
+      unicode/dbbi.h
+      unicode/dcfmtsym.h
+      unicode/decimfmt.h
+      unicode/dtfmtsym.h
+      unicode/dtintrv.h
+      unicode/dtitvfmt.h
+      unicode/dtitvinf.h
+      unicode/dtptngen.h
+      unicode/dtrule.h
+      unicode/enumset.h
+      unicode/errorcode.h
+      unicode/fieldpos.h
+      unicode/filteredbrk.h
+      unicode/fmtable.h
+      unicode/format.h
+      unicode/fpositer.h
+      unicode/gender.h
+      unicode/gregocal.h
+      unicode/idna.h
+      unicode/listformatter.h
+      unicode/localpointer.h
+      unicode/locdspnm.h
+      unicode/locid.h
+      unicode/measfmt.h
+      unicode/measunit.h
+      unicode/measure.h
+      unicode/messagepattern.h
+      unicode/msgfmt.h
+      unicode/normalizer2.h
+      unicode/normlzr.h
+      unicode/numfmt.h
+      unicode/numsys.h
+      unicode/parsepos.h
+      unicode/plurfmt.h
+      unicode/plurrule.h
+      unicode/rbbi.h
+      unicode/rbnf.h
+      unicode/rbtz.h
+      unicode/regex.h
+      unicode/region.h
+      unicode/reldatefmt.h
+      unicode/rep.h
+      unicode/resbund.h
+      unicode/schriter.h
+      unicode/scientificnumberformatter.h
+      unicode/search.h
+      unicode/selfmt.h
+      unicode/simpletz.h
+      unicode/smpdtfmt.h
+      unicode/sortkey.h
+      unicode/std_string.h
+      unicode/strenum.h
+      unicode/stringpiece.h
+      unicode/stringtriebuilder.h
+      unicode/stsearch.h
+      unicode/symtable.h
+      unicode/tblcoll.h
+      unicode/timezone.h
+      unicode/tmunit.h
+      unicode/tmutamt.h
+      unicode/tmutfmt.h
+      unicode/translit.h
+      unicode/tzfmt.h
+      unicode/tznames.h
+      unicode/tzrule.h
+      unicode/tztrans.h
+      unicode/ucharstrie.h
+      unicode/ucharstriebuilder.h
+      unicode/uchriter.h
+      unicode/unifilt.h
+      unicode/unifunct.h
+      unicode/unimatch.h
+      unicode/unirepl.h
+      unicode/uniset.h
+      unicode/unistr.h
+      unicode/uobject.h
+      unicode/usetiter.h
+      unicode/ustream.h
+      unicode/vtzone.h
+    ]
+    oh1 "deleting unsafe C++ header files"
+    cd include do
+      File.delete(*cxxheaders)
+    end
+  end
+
+  def post_install
+    # The generated dylibs unpredictably refer to some or all of their required libraries using the
+    # "@loader_path" syntax, which ld refuses to recognize even though it wrote them that way.  Not
+    # even Tigerbrew’s newer ld64 works.  Work around this by editing any such link names:
+    oh1 "verifying that dynamic libraries are linked correctly"
+    Dir["#{opt_lib}/*.#{version}.dylib"].each do |l|
+      FileUtils::chmod "a+w", l
+      `#{OS::Mac.otool.to_s} -L #{l}`.lines.select { |s|
+        s =~ /\@loader_path/
+      }.map { |s|
+        s.match(/\@loader_path\S+/)
+      }.each do |n|
+        system OS::Mac.install_name_tool.to_s, "-change", n, n.to_s.sub("@loader_path", opt_lib), l
+      end
+      FileUtils::chmod "a-w", l
     end
   end
 
@@ -48,11 +189,9 @@ class Icu4c < Formula
 end
 
 __END__
-diff --git a/source/common/putil.cpp b/source/common/putil.cpp
-index 01b0683..69d89d8 100644
---- a/source/common/putil.cpp
-+++ b/source/common/putil.cpp
-@@ -124,6 +124,13 @@
+--- source/common/putil.cpp.old           2024-01-11 15:21:48.000000000 -0800
++++ source/common/putil.cpp               2024-01-11 15:24:06.000000000 -0800
+@@ -117,6 +117,13 @@
  #endif
  
  /*
@@ -66,11 +205,9 @@ index 01b0683..69d89d8 100644
   * Only include langinfo.h if we have a way to get the codeset. If we later
   * depend on more feature, we can test on U_HAVE_NL_LANGINFO.
   *
-diff --git a/source/tools/toolutil/pkg_genc.c b/source/tools/toolutil/pkg_genc.c
-index 3096db8..9a4fa21 100644
---- a/source/tools/toolutil/pkg_genc.c
-+++ b/source/tools/toolutil/pkg_genc.c
-@@ -113,13 +113,13 @@ static const struct AssemblyType {
+--- source/tools/toolutil/pkg_genc.c.old  2024-01-11 16:29:38.000000000 -0800
++++ source/tools/toolutil/pkg_genc.c      2024-01-11 16:31:15.000000000 -0800
+@@ -113,13 +113,13 @@
      int8_t      hexType; /* HEX_0X or HEX_0h */
  } assemblyHeader[] = {
      /* For gcc assemblers, the meaning of .align changes depending on the */
@@ -86,7 +223,7 @@ index 3096db8..9a4fa21 100644
          "#ifdef U_HIDE_DATA_SYMBOL\n"
          "\t.hidden %s\n"
          "#endif\n"
-@@ -137,7 +137,7 @@ static const struct AssemblyType {
+@@ -137,7 +137,7 @@
          "#endif\n"
          "\t.data\n"
          "\t.const\n"
@@ -95,7 +232,7 @@ index 3096db8..9a4fa21 100644
          "_%s:\n\n",
  
          ".long ","",HEX_0X
-@@ -145,7 +145,7 @@ static const struct AssemblyType {
+@@ -145,7 +145,7 @@
      {"gcc-cygwin",
          ".globl _%s\n"
          "\t.section .rodata\n"
@@ -104,7 +241,7 @@ index 3096db8..9a4fa21 100644
          "_%s:\n\n",
  
          ".long ","",HEX_0X
-@@ -153,7 +153,7 @@ static const struct AssemblyType {
+@@ -153,7 +153,7 @@
      {"gcc-mingw64",
          ".globl %s\n"
          "\t.section .rodata\n"
@@ -113,4 +250,3 @@ index 3096db8..9a4fa21 100644
          "%s:\n\n",
  
          ".long ","",HEX_0X
-

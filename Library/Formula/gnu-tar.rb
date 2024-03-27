@@ -9,35 +9,34 @@ class GnuTar < Formula
     sha256 "f57c9b390419b477944bcbf7eaa18ae8bd2dc62007534679843e47cdde8143e1" => :tiger_altivec
   end
 
-  option "with-default-names", "Do not prepend 'g' to the binary"
+  option "with-libiconv", "Build with text encoding support"
+  depends_on "libiconv" => :optional
+  option "with-self-test", "Run the package’s post-installation tests (currently fails)"
+
+  def caveats; <<-_.undent
+      gnu-tar (and its manpage) are installed as "gtar", to avoid collision with the system-
+      supplied binary.
+    _
+  end
 
   def install
-    args = ["--prefix=#{prefix}", "--mandir=#{man}"]
-    args << "--program-prefix=g" if build.without? "default-names"
+    args = %W[
+      --prefix=#{prefix}
+      --disable-dependency-tracking
+      --disable-year2038
+      --mandir=#{man}
+      --program-prefix=g
+    ]
+    args << "--with-libiconv-prefix=#{Formula["libiconv"].opt_prefix}" if build.with? "libiconv"
 
     system "./configure", *args
     system "make", "install"
-
-    # Symlink the executable into libexec/gnubin as "tar"
-    (libexec/"gnubin").install_symlink bin/"gtar" => "tar" if build.without? "default-names"
-  end
-
-  def caveats
-    if build.without? "default-names" then <<-EOS.undent
-      gnu-tar has been installed as "gtar".
-
-      If you really need to use it as "tar", you can add a "gnubin" directory
-      to your PATH from your bashrc like:
-
-          PATH="#{opt_libexec}/gnubin:$PATH"
-      EOS
-    end
+    system "make", "installcheck" if build.with? "self-test"
   end
 
   test do
-    tar = build.with?("default-names") ? bin/"tar" : bin/"gtar"
     (testpath/"test").write("test")
-    system tar, "-czvf", "test.tar.gz", "test"
-    assert_match /test/, shell_output("#{tar} -xOzf test.tar.gz")
+    system "gtar", "-czvf", "test.tar.gz", "test"
+    assert_match /test/, shell_output("gtar -xOzf test.tar.gz")
   end
 end

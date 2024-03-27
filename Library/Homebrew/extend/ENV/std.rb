@@ -293,7 +293,7 @@ module Stdenv
     if compiler == :clang
       append "CXX", "-std=c++11"
       append "CXX", "-stdlib=libc++"
-    elsif compiler =~ /gcc-(4\.(8|9)|5)/
+    elsif compiler =~ GNU_GXX11_REGEXP
       append "CXX", "-std=c++11"
     else
       raise "The selected compiler doesn't support C++11: #{compiler}"
@@ -353,6 +353,11 @@ module Stdenv
       # -march=<cpu family> to do the right thing because we might be running
       # in a VM or on a Hackintosh.
       Hardware.oldest_cpu
+    elsif Hardware::CPU.family == :g5_64
+      # distinguishing :g5 from :g5_64 is only helpful for bottles; for anything else, having an
+      # extra “-arch” in the compiler flags can really smurf things up.  For example, the actions
+      # of some packages’ Makefiles can trigger surprise generation of fat binaries!
+      :g5
     else
       Hardware::CPU.family
     end
