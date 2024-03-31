@@ -24,6 +24,7 @@ class Gettext < Formula
   def install
     ENV.libxml2
 
+<<<<<<< HEAD
     if build.universal?
       ENV.permit_arch_flags
       archs = Hardware::CPU.universal_archs
@@ -76,6 +77,29 @@ class Gettext < Formula
 
     Merge.mach_o(prefix, dirs) if build.universal?
   end # install
+=======
+    system "./configure", "--disable-dependency-tracking",
+                          (ARGV.verbose? ? "--disable-silent-rules" : ""),
+                          "--disable-debug",
+                          "--prefix=#{prefix}",
+                          "--with-included-gettext",
+                          "--with-included-glib",
+                          "--with-included-libcroco",
+                          "--with-included-libunistring",
+                          "--with-emacs",
+                          "--with-lispdir=#{share}/emacs/site-lisp/gettext",
+                          "--disable-java",
+                          "--disable-csharp",
+                          # Don't use VCS systems to create these archives
+                          "--without-git",
+                          "--without-cvs",
+                          "--without-xz"
+    system "make"
+    system "make", "check"
+    ENV.deparallelize # install doesn't support multiple make jobs
+    system "make", "install"
+  end
+>>>>>>> 364b89a2ef (Ongoing efforts to unstupid superenv and to add more --universal builds)
 
   test do
     system "#{bin}/gettext", '--version'

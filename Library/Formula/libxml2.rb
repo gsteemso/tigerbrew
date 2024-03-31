@@ -45,9 +45,13 @@ class Libxml2 < Formula
     system "./configure", *args
     inreplace ['Makefile', 'python/Makefile'], '-lpython2.7', '-undefined dynamic_lookup'
     system "make"
+<<<<<<< HEAD
     system "make", "check" if (build.without?('python') or
                                ((not build.universal?) and (not Tab.for_name('python').universal?)) or
                                (build.universal? and Tab.for_name('python').universal?) )
+=======
+    system "make", "check"
+>>>>>>> 364b89a2ef (Ongoing efforts to unstupid superenv and to add more --universal builds)
     system "make", "install"
 
     if build.with? "python"

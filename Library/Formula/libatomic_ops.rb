@@ -16,7 +16,11 @@ class LibatomicOps < Formula
       --disable-dependency-tracking
       --enable-shared
     ]
+<<<<<<< HEAD
     args << (ARGV.verbose? ? '--disable-silent-rules' : '--enable-silent-rules')
+=======
+    args << "--disable-silent-rules" if ARGV.verbose?
+>>>>>>> 364b89a2ef (Ongoing efforts to unstupid superenv and to add more --universal builds)
 
     system "./configure", *args
     system "make"
