@@ -13,7 +13,6 @@ class Libxml2 < Formula
   end
 
   option :universal
-  option "with-build-tests", "Conduct internal consistency checks before final installation"
 
   depends_on 'icu4c' => :recommended
   depends_on "python" => :optional
@@ -57,7 +56,7 @@ class Libxml2 < Formula
 
     system "./configure", *args
     system "make"
-    system "make", "check" if build.with? "build-tests"
+    system "make", "check"
     system "make", "install"
 
     if build.with? "python"

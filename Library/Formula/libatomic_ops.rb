@@ -19,10 +19,10 @@ class LibatomicOps < Formula
     args = %W[
       --prefix=#{prefix}
       --disable-dependency-tracking
-      --disable-silent-rules
       --enable-shared
       --enable-assertions
     ]
+    args << "--disable-silent-rules" if ARGV.verbose?
 
     system "./configure", *args
     system "make"
@@ -32,8 +32,8 @@ class LibatomicOps < Formula
 end
 
 __END__
---- tests/Makefile.orig     2024-03-25 11:38:47.000000000 -0700
-+++ tests/Makefile          2024-03-25 11:38:20.000000000 -0700
+--- tests/Makefile.in.orig     2024-03-25 11:38:47.000000000 -0700
++++ tests/Makefile.in          2024-03-25 11:38:20.000000000 -0700
 @@ -559,7 +559,7 @@
  
  # We distribute test_atomic_include.h and list_atomic.c, since it is hard

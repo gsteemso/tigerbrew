@@ -25,7 +25,7 @@ class Gettext < Formula
     ENV.universal_binary if build.universal?
 
     system "./configure", "--disable-dependency-tracking",
-                          "--disable-silent-rules",
+                          (ARGV.verbose? ? "--disable-silent-rules" : ""),
                           "--disable-debug",
                           "--prefix=#{prefix}",
                           "--with-included-gettext",

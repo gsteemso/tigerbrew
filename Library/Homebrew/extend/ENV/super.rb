@@ -230,8 +230,10 @@ module Superenv
     #   ""
     # ...that "elsewhere" appears to not yet exist, so, optimize here:
     else
+      # when building --universal, you get both -arch flags for free; having an extra one can
+      # really ruin your day, so get rid of it
       target_CPU = Hardware::CPU.family
-      target_CPU = :g5 if target_CPU = :g5_64
+      target_CPU = :g5 if ARGV.build_universal? and target_CPU = :g5_64
       Hardware::CPU.optimization_flags.fetch(target_CPU)
     end
   end

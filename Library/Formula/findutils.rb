@@ -12,8 +12,7 @@ class Findutils < Formula
   def caveats; <<-EOS.undent
       All commands (and their manpages) are installed with a leading "g" on their names, because
       Mac OS X already includes commands with most of the normal names.  The sole exception, the
-      realpath command (and its manpage), are made available by its normal name as well as with the
-      "g" prefix.
+      realpath command (with its manpage), is also made available by its normal name.
     EOS
   end
 

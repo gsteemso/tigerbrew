@@ -45,11 +45,11 @@ class Curl < Formula
     args = %W[
       --prefix=#{prefix}
       --disable-dependency-tracking
-      --disable-silent-rules
       --disable-debug
       --with-gssapi
       --with-zlib=#{Formula["zlib"].opt_prefix}
     ]
+    args << "--disable-silent-rules" if ARGV.verbose?
 
     # cURL has a new firm desire to find ssl with PKG_CONFIG_PATH instead of using
     # "--with-ssl" any more. "when possible, set the PKG_CONFIG_PATH environment
