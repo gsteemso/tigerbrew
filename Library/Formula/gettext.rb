@@ -1,19 +1,21 @@
 class Gettext < Formula
   desc "GNU internationalization (i18n) and localization (l10n) library"
   homepage "https://www.gnu.org/software/gettext/"
-  url "https://ftpmirror.gnu.org/gettext/gettext-0.22.4.tar.xz"
-  mirror "https://ftp.gnu.org/gnu/gettext/gettext-0.22.4.tar.xz"
-  sha256 "29217f1816ee2e777fa9a01f9956a14139c0c23cc1b20368f06b2888e8a34116"
+  url "https://ftpmirror.gnu.org/gettext/gettext-0.22.5.tar.lz"
+  mirror "https://ftp.gnu.org/gnu/gettext/gettext-0.22.5.tar.lz"
+  sha256 "caa44aed29c9b4900f1a401d68f6599a328a3744569484dc95f62081e80ad6cb"
+  # switched to the LZip’d version because it’s a lot smaller
 
-  bottle do
-    sha256 "c64bb31029e29599442653fe1e0f2216ae8fe144451a0541896f6e367df0018f" => :tiger_altivec
-  end
+#  bottle do
+#    sha256 "c64bb31029e29599442653fe1e0f2216ae8fe144451a0541896f6e367df0018f" => :tiger_altivec
+#  end
 
   unless MacOS.version <= :leopard  # what Mac OS version would be correct here?
     keg_only :shadowed_by_osx, "OS X provides the BSD gettext library and some software gets confused if both are in the library path."
   end
 
   option :universal
+  option "with-examples", "Keep example files"
 
   # Fix lang-python-* failures when a traditional French locale
   # https://git.savannah.gnu.org/gitweb/?p=gettext.git;a=patch;h=3c7e67be7d4dab9df362ab19f4f5fa3b9ca0836b
@@ -25,12 +27,10 @@ class Gettext < Formula
     ENV.universal_binary if build.universal?
 
     system "./configure", "--disable-dependency-tracking",
-                          (ARGV.verbose? ? "--disable-silent-rules" : ""),
+                          (ARGV.verbose? ? "--disable-silent-rules" : "--enable-silent-rules"),
                           "--disable-debug",
                           "--prefix=#{prefix}",
                           "--with-included-gettext",
-                          "--with-included-glib",
-                          "--with-included-libcroco",
                           "--with-included-libunistring",
                           "--with-emacs",
                           "--with-lispdir=#{share}/emacs/site-lisp/gettext",
@@ -39,7 +39,8 @@ class Gettext < Formula
                           # Don't use VCS systems to create these archives
                           "--without-git",
                           "--without-cvs",
-                          "--without-xz"
+                          "--without-xz",
+                          (build.with? "examples" ? "--with-examples" : "--without-examples")
     system "make"
     system "make", "check"
     ENV.deparallelize # install doesn't support multiple make jobs
@@ -164,9 +165,9 @@ __END__
      fi
      Exit 77
    fi
---- gettext-tools/Makefile.in.orig	2023-12-02 21:46:40.000000000 +0000
-+++ gettext-tools/Makefile.in	2023-12-02 21:47:08.000000000 +0000
-@@ -3400,7 +3400,7 @@
+--- gettext-tools/Makefile.in.orig	2024-04-09 14:16:44.000000000 +0000
++++ gettext-tools/Makefile.in	2024-04-09 14:17:28.000000000 +0000
+@@ -3416,7 +3416,7 @@
  top_srcdir = @top_srcdir@
  AUTOMAKE_OPTIONS = 1.5 gnu no-dependencies
  ACLOCAL_AMFLAGS = -I m4 -I ../gettext-runtime/m4 -I ../m4 -I gnulib-m4 -I libgrep/gnulib-m4 -I libgettextpo/gnulib-m4
