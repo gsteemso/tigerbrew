@@ -39,11 +39,16 @@ class Gmp < Formula
       end
     end
 
+    def to_preproc_macro(sym)
+      "__#{sym}__"
+    end
+
     b_cpu = Hardware::CPU.family
     tuple_trailer = "apple-darwin#{`uname -r`}"
 
     if build.universal?
       archs = Hardware::CPU.universal_archs
+      mkdir per_arch_gmp_h
     elsif MacOS.prefer_64_bit?
       archs = [Hardware::CPU.arch_64_bit]
     else
@@ -89,6 +94,10 @@ class Gmp < Formula
       system 'make', 'check'
       system 'make', 'install'
 
+      # this header is architecture-dependent; in the case of installing :universal, this copy will
+      # be used when merging them all together
+      system 'cp', 'include/gmp.h', "../per_arch_gmp_h/#{arch}"
+
       # undo architecture-specific tweaks before next run
       ENV.remove_from_cflags "-arch #{arch}"
       ENV.remove 'HOMEBREW_ARCHFLAGS', '-m32' if (arch == :i386 or arch == :ppc)
@@ -100,6 +109,7 @@ class Gmp < Formula
     lib.mkdir
 
     if build.universal?
+      # build the fat libraries directly into place
       system 'lipo', '-create', *Dir["{#{dirs.join(',')}}/lib/libgmp.??.dylib"],
                      '-output', lib/'libgmp.10.dylib'
       system 'lipo', '-create', *Dir["{#{dirs.join(',')}}/lib/libgmp.a"],
@@ -108,15 +118,28 @@ class Gmp < Formula
                      '-output', lib/'libgmpxx.4.dylib'
       system 'lipo', '-create', *Dir["{#{dirs.join(',')}}/lib/libgmpxx.a"],
                      '-output', lib/'libgmpxx.a'
+      # grab the symlinks too
       lib.install Dir["#{dirs.first}/lib/lib*"].select { |s| Pathname.new(s).symlink? }
+      # and the C++ header, which is architecture-independent
+      include.install "#{dirs.first}/include/gmpxx.h"
 
-      # TODO:  the system-specific header files need to be surgically combined.  For now just stash
-      # them someplace that won’t be erased when we finish.  On ppc/ppc64, only 2 lines differ.  It
-      # should be feasible to “#if defined” each pair into a unit.
-      dirs.each { |d|
-        dpath = include/d
-        dpath.mkdir
-        dpath.install Dir["#{d}/include/*"]
+      # the system-specific gmp.h files need to be surgically combined.  They were stashed in
+      # ./per_arch_gmp_h/ for this purpose.  The differences are minor and can be #ifdef’d together.
+      basis_file = "per_arch_gmp_h/#{archs.first}"
+      diff_groups = {}
+      diffs = {}
+      diffpoints = {}
+      archs[1..-1].each { |a|
+        diff_groups[a] = `diff -u 0 #{basis_file} per_arch_gmp_h/#{a}`
+        diffs[a] = diff_groups[a].lines[2..-1].join('').split(/(?=^\@\@)/)
+        diffs[a].each { |d|
+          basis_line = d.match(/\A@@ -(\d+)/)[0]
+          arch_line = d.match(/\A@@ -\d+,\d+ \+(\d+)/)[0]
+          unless diffpoints.has_key?(basis_line)
+            diffpoints[basis_line] = []
+          end
+          diffpoints[basis_line] << {arch_line => a}
+        }
       }
     else
       lib.install Dir["#{dirs.first}/lib/lib*"]
