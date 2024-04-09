@@ -254,7 +254,7 @@ module Superenv
   # When passed a block, MAKEFLAGS is altered only for the duration of the block and is restored after its completion.
   def deparallelize
     old = self["MAKEFLAGS"]
-    self["MAKEFLAGS"].sub!(/(-\w*j)\d+/, "\\11")
+    self["MAKEFLAGS"] = self["MAKEFLAGS"].sub(/(-\w*j)\d+/, "\\11")
     if block_given?
       begin
         yield
