@@ -16,6 +16,7 @@ class Gmp < Formula
     ENV.cxx11 if build.cxx11?
     ENV.permit_arch_flags if build.universal?
 
+    # a utility routine to map Tigerbrew’s CPU symbols to those used in configuring a GMP build
     def cpu_lookup(cpu_sym)
       case cpu_sym
         when :g3
@@ -39,8 +40,10 @@ class Gmp < Formula
       end
     end
 
-    def to_preproc_macro(sym)
-      "__#{sym}__"
+    # a utility routine for processing diffs (used when splicing together the architecture-
+    # dependent header files of a :universal build)
+    def extract_new_lines(hunk)
+      hunk.lines.select { |l| l =~ /^\+/ }.map { |l| l[1, -1] }
     end
 
     b_cpu = Hardware::CPU.family
@@ -123,24 +126,45 @@ class Gmp < Formula
       # and the C++ header, which is architecture-independent
       include.install "#{dirs.first}/include/gmpxx.h"
 
-      # the system-specific gmp.h files need to be surgically combined.  They were stashed in
+      # The system-specific gmp.h files need to be surgically combined.  They were stashed in
       # ./per_arch_gmp_h/ for this purpose.  The differences are minor and can be #ifdef’d together.
       basis_file = "per_arch_gmp_h/#{archs.first}"
-      diff_groups = {}
-      diffs = {}
-      diffpoints = {}
-      archs[1..-1].each { |a|
-        diff_groups[a] = `diff -u 0 #{basis_file} per_arch_gmp_h/#{a}`
-        diffs[a] = diff_groups[a].lines[2..-1].join('').split(/(?=^\@\@)/)
-        diffs[a].each { |d|
+      diffpoints = {}  # Keyed by line number in the basis file.  Contains arrays of two-element
+                       # hashes, where one item is the arch and the other is the applicable hunk.
+      archs[1..-1].each do |a|
+        raw_diffs = `diff -u 0 #{basis_file} per_arch_gmp_h/#{a}`
+        diff_hunks = raw_diffs.lines[2..-1].join('').split(/(?=^\@\@)/)
+        diff_hunks.each do |d|
           basis_line = d.match(/\A@@ -(\d+)/)[0]
-          arch_line = d.match(/\A@@ -\d+,\d+ \+(\d+)/)[0]
           unless diffpoints.has_key?(basis_line)
             diffpoints[basis_line] = []
           end
-          diffpoints[basis_line] << {arch_line => a}
-        }
-      }
+          diffpoints[basis_line] << { :arch => a,
+                                      :displacement => d.match(/\A@@ -\d+,(\d+)/)[0],
+                                      :hunk_lines => extract_new_lines(d)
+                                    }
+        end
+      end
+      # Ideally the algorithm would account for overlapping and/or different-length hunks at this
+      # point; but since that doesn't appear to be a thing that GMP generates in the first place,
+      # and would in any case only become relevant if "REALLY universal" triple-or-more fat
+      # binaries are implemented, it can wait.
+
+      basis_lines = basis_file.lines  # the array indices are one less than the line numbers
+      # start with the last diff point so that the insertions don't screw up our line numbering
+      diffpoints.keys.sort.reverse.each do |index|
+        diff_start = index - 1
+        diff_end = index + diffpoints[index][0][:displacement] - 2
+        basis_lines[diff_start..diff_end] = [
+          "\#if defined (__#{archs.first}__)\n",
+          basis_lines[diff_start..diff_end],
+          *diffpoints[index].each { |d|
+            [ "\#elif defined (__#{d[:arch]}__)\n", *d[:hunk_lines] ]
+          },
+          "\#endif\n"
+        ]
+      end
+      File.new(include/'gmp.h'.to_path, 'w', 0644).write basis_lines.join('')
     else
       lib.install Dir["#{dirs.first}/lib/lib*"]
       include.install Dir["#{dirs.first}/include/*"]
