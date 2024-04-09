@@ -15,7 +15,11 @@ class Cunit < Formula
   depends_on "automake" => :build
   depends_on "libtool" => :build
 
+  option :universal
+
   def install
+    ENV.universal_binary if build.universal?
+
     inreplace "bootstrap", "libtoolize", "glibtoolize"
     system "sh", "bootstrap", prefix
     system "make", "install"
