@@ -1,11 +1,11 @@
 SIGNATURES = {
   'cafebabe' => :FAT_MAGIC,
-  'bebafeca' => :FAT_CIGAM,
   'feedface' => :MH_MAGIC,
-  'cefaedfe' => :MH_CIGAM,
   'feedfacf' => :MH_MAGIC_64,
-  'cffaedfe' => :MH_CIGAM_64,
   '7f454c46' => :MH_ELF,
+  'bebafeca' => :FAT_CIGAM,
+  'cefaedfe' => :MH_CIGAM,
+  'cffaedfe' => :MH_CIGAM_64,
   '464c457f' => :MH_FLE,
 }.freeze
 
@@ -62,75 +62,75 @@ end # cpu_valid
 
 # Assume the TTY understands standard control sequences:
 # - In the 7-bit environment imposed by UTF-8, the Control Sequence Introducer (CSI) consists of
-#   "ESC [".
-# - Control sequences containing multiple parameters separate them by ';'.
-# - The Select Graphic Rendition (SGR) sequence is "CSI P ... 'm'".  SGR is affected by the Graphic
-#   Rendition Combination Mode (GRCM).  The default (off) GRCM state, REPLACING, causes any SGR
-#   sequence to reset all parameters it doesn't explicitly mention; enabling the CUMULATIVE state
-#   allows effects to persist until cancelled.  Luckily, OS X's Terminal app seems to ignore the
-#   standard and default this to the more sensible CUMULATIVE state, at least under Leopard.
+#   "ESC `[`".
+# - Control sequences containing multiple parameters separate them by `;`.
+# - The Select Graphic Rendition (SGR) sequence is "CSI <P> ... `m`".  SGR is affected by the
+#   Graphic Rendition Combination Mode (GRCM).  The default (off) GRCM state, REPLACING, causes any
+#   SGR sequence to reset all parameters it doesn't explicitly mention; enabling the CUMULATIVE
+#   state allows effects to persist until cancelled.  Luckily, OS X's Terminal app seems to ignore
+#   the standard and default this to the more sensible CUMULATIVE state, at least under Leopard.
 # - If GRCM is in the REPLACING state and needs to be set CUMULATIVE, the Set Mode (SM) sequence is
-#   "CSI P ... 'h'" and the parameter value for GRCM is 21.  Should it for some reason need to be
-#   changed back to REPLACING, the Reset Mode (RM) sequence is "CSI P ... 'l'".
+#   "CSI <P> ... `h`" and the parameter value for GRCM is 21.  Should it for some reason need to be
+#   changed back to REPLACING, the Reset Mode (RM) sequence is "CSI <P> ... `l`".
 # - The SGR parameters are:
-#   '0':  Restores the default rendition, regardless of the GRCM state.
-#   '1':  Bold or increased intensity.  (The few hardware terminals implementing these had an eight-
-#   '2':  Faint or reduced intensity.    step intensity scale, ranging from "totally dark, no
+#   `0`:  Restores the default rendition, regardless of the GRCM state.
+#   `1`:  Bold or increased intensity.  (The few hardware terminals implementing these had a seven-
+#   `2`:  Faint or reduced intensity.    step intensity scale, ranging from "totally dark, no
 #                                        output" to "too bright".)
-#   '3':  Italicized.
-#   '4':  Underlined (cancels '21').
-#   '5':  Blinking, at less than 150 per minute (2.5 Hz).
-#   '6':  Blinking, at 150 per minute (2.5 Hz) or more.
-#   '7':  Negative image (inverse video).
-#   '8':  Concealed characters.
-#   '9':  Strikethrough (characters legible but marked for deletion).
-#   '10':  Primary (default) font.
-#   '11'-'19':  Alternate fonts 1-9.
-#   '20':  Fraktur (Gothic).
-#   '21':  Doubly underlined (cancels '4').
-#   '22':  Normal intensity (cancels '1' and '2').
-#   '23':  Cancels Italics and Fraktur ('3' and '20').
-#   '24':  Cancels single and double underlining ('4' and '21').
-#   '25':  Cancels blinking ('5' and '6').
-#   '26':  Reserved for proportional-width characters.  (Probably never implemented in hardware.)
-#   '27':  Positive image (cancels inverse video, '7').
-#   '28':  Visible characters (cancels concealment, '8').
-#   '29':  Cancels strikethrough ('9').
-#   '30':  Black display.
-#   '31':  Red display (dark).
-#   '32':  Green display (dark).
-#   '33':  Yellow display (dark).
-#   '34':  Blue display (dark).
-#   '35':  Magenta display (purple).
-#   '36':  Cyan display (teal).
-#   '37':  White display (light grey).
-#   '38':  Reserved for setting display colour.
-#   '39':  Default display (implementation-defined).
-#   '40':  Black display.
-#   '41':  Red background (dark).
-#   '42':  Green background (dark).
-#   '43':  Yellow background (dark).
-#   '44':  Blue background (dark).
-#   '45':  Magenta background (purple).
-#   '46':  Cyan background (teal).
-#   '47':  White background (light grey).
-#   '48':  Reserved for setting background colour.
-#   '49':  Default background (implementation-defined).
-#   '50':  Reserved for cancelling the effects of '26'.
-#   '51':  Framed.
-#   '52':  Encircled.
-#   '53':  Overlined.
-#   '54':  Neither framed nor encircled (cancels '51' and '52').
-#   '55':  Cancels overlining ('53').
-#   '56'-'59':  Unused.
-#   '60':  Ideogram underline/right-side line.
-#   '61':  Ideogram double underline/right-side line.
-#   '62':  Ideogram overline/left-side line.
-#   '63':  Ideogram double overline/left-side line.
-#   '64':  Ideogram stress marking.
-#   '65':  Cancels '60'-'64'.
+#   `3`:  Italicized.
+#   `4`:  Underlined (cancels `21`).
+#   `5`:  Blinking, at less than 150 per minute (2.5 Hz).
+#   `6`:  Blinking, at 150 per minute (2.5 Hz) or more.
+#   `7`:  Negative image (inverse video).
+#   `8`:  Concealed characters.
+#   `9`:  Strikethrough (characters legible but marked for deletion).
+#   `10`:  Primary (default) font.
+#   `11`-`19`:  Alternate fonts 1-9.
+#   `20`:  Fraktur (Gothic).
+#   `21`:  Doubly underlined (cancels `4`).
+#   `22`:  Normal intensity (cancels `1` and `2`).
+#   `23`:  Cancels Italics and Fraktur (`3` and `20`).
+#   `24`:  Cancels single and double underlining (`4` and `21`).
+#   `25`:  Cancels blinking (`5` and `6`).
+#   `26`:  Reserved for proportional-width characters.  (Probably never implemented in hardware.)
+#   `27`:  Positive image (cancels inverse video, `7`).
+#   `28`:  Visible characters (cancels concealment, `8`).
+#   `29`:  Cancels strikethrough (`9`).
+#   `30`:  Black display.
+#   `31`:  Red display (dark).
+#   `32`:  Green display (dark).
+#   `33`:  Yellow display (dark).
+#   `34`:  Blue display (dark).
+#   `35`:  Magenta display (purple).
+#   `36`:  Cyan display (teal).
+#   `37`:  White display (light grey).
+#   `38`:  Reserved for setting display colour.
+#   `39`:  Default display (implementation-defined).
+#   `40`:  Black display.
+#   `41`:  Red background (dark).
+#   `42`:  Green background (dark).
+#   `43`:  Yellow background (dark).
+#   `44`:  Blue background (dark).
+#   `45`:  Magenta background (purple).
+#   `46`:  Cyan background (teal).
+#   `47`:  White background (light grey).
+#   `48`:  Reserved for setting background colour.
+#   `49`:  Default background (implementation-defined).
+#   `50`:  Reserved for cancelling the effects of `26`.
+#   `51`:  Framed.
+#   `52`:  Encircled.
+#   `53`:  Overlined.
+#   `54`:  Neither framed nor encircled (cancels `51` and `52`).
+#   `55`:  Cancels overlining (`53`).
+#   `56`-`59`:  Unused.
+#   `60`:  Ideogram underline/right-side line.
+#   `61`:  Ideogram double underline/right-side line.
+#   `62`:  Ideogram overline/left-side line.
+#   `63`:  Ideogram double overline/left-side line.
+#   `64`:  Ideogram stress marking.
+#   `65`:  Cancels `60`-`64`.
 # Extensions to the above include:
-#   '38' (and '48'):  Multiple implementations.  Mac OS X's Terminal app doesn't support any of
+#   `38` (and `48`):  Multiple implementations.  Mac OS X's Terminal app doesn't support any of
 #                     them, at least under Leopard.
 #                     - 88-value colour is implemented by some terminal emulators in a manner
 #                       similar to the encoding of 256-value colour, but the details of the scheme
@@ -138,42 +138,42 @@ end # cpu_valid
 #                       four-step colour cube similar to the six-step cube used in 256-value colour,
 #                       as well as the regular and bright sets of eight colours, and eight steps of
 #                       greyscale.
-#                     - 256-value (8-bit) colour is implemented as "CSI '38;5;' COLOUR 'm'", where
-#                       COLOUR is a value from '0'-'255', interpreted as follows:
-#                       '0'-'7':  Standard colours, as above.
-#                       '8'-'15':  Bright versions of the standard colours, as below.
-#                       '16'-'231':  RGB colours, in a six-step (0..5) cubic space -- the encoded
+#                     - 256-value (8-bit) colour is implemented as "CSI `38;5;` COLOUR `m`", where
+#                       COLOUR is a value from `0`-`255`, interpreted as follows:
+#                       `0`-`7`:  Standard colours, as above.
+#                       `8`-`15`:  Bright versions of the standard colours, as below.
+#                       `16`-`231`:  RGB colours, in a six-step (0..5) cubic space -- the encoded
 #                                    value = 16 + (36 x RED + 6 x GREEN + BLUE).  It appears that
 #                                    these may actually represent levels 1-6 from a range of 0-7,
 #                                    with some of the resulting coverage gaps occupied by the other
 #                                    40 encoded colours.
-#                       '232'-'255':  24 shades of grey from dark to light, intermediate to the
+#                       `232`-`255`:  24 shades of grey from dark to light, intermediate to the
 #                                     above.  In total, this could yield 32 greys plus black and
 #                                     white, but whether any consensus ordering of the nominally
 #                                     redundant encodings exists is unclear.
 #                     - 24-bit colour (eight bits per RGB component) is implemented as
-#                       "CSI '38;2;' RED ';' GREEN ';' BLUE 'm'", where RED, GREEN and BLUE are
-#                       each values in the range '0' through '255'.
-#                     - Some standards incorrectly specify both 8-bit and 24-bit colour using ':'
-#                       instead of ';'.  Such would be valid, if incompatible, if colons were only
+#                       "CSI `38;2;` RED `;` GREEN `;` BLUE `m`", where RED, GREEN and BLUE are
+#                       each values in the range `0` through `255`.
+#                     - Some standards incorrectly specify both 8-bit and 24-bit colour using `:`
+#                       instead of `;`.  Such would be valid, if incompatible, if colons were only
 #                       specified to separate the three components of a 24-bit colour string; but
 #                       that isn't what was done.
-#   '90':  Bright black (dark grey) display, equivalent to '38;5;8'.
-#   '91':  Bright red display, equivalent to '38;5;9'.
-#   '92':  Bright green display, equivalent to '38;5;10'.
-#   '93':  Bright yellow display, equivalent to '38;5;11'.
-#   '94':  Bright blue display, equivalent to '38;5;12'.
-#   '95':  Bright magenta display, equivalent to '38;5;13'.
-#   '96':  Bright cyan display, equivalent to '38;5;14'.
-#   '97':  Bright white display, equivalent to '38;5;15'.
-#   '100':  Bright black (dark grey) background, equivalent to '48;5;8'.
-#   '101':  Bright red background, equivalent to '48;5;9'.
-#   '102':  Bright green background, equivalent to '48;5;10'.
-#   '103':  Bright yellow background, equivalent to '48;5;11'.
-#   '104':  Bright blue background, equivalent to '48;5;12'.
-#   '105':  Bright magenta background, equivalent to '48;5;13'.
-#   '106':  Bright cyan background, equivalent to '48;5;14'.
-#   '107':  Bright white background, equivalent to '48;5;15'.
+#   `90`:  Bright black (dark grey) display, equivalent to `38;5;8`.
+#   `91`:  Bright red display, equivalent to `38;5;9`.
+#   `92`:  Bright green display, equivalent to `38;5;10`.
+#   `93`:  Bright yellow display, equivalent to `38;5;11`.
+#   `94`:  Bright blue display, equivalent to `38;5;12`.
+#   `95`:  Bright magenta display, equivalent to `38;5;13`.
+#   `96`:  Bright cyan display, equivalent to `38;5;14`.
+#   `97`:  Bright white display, equivalent to `38;5;15`.
+#   `100`:  Bright black (dark grey) background, equivalent to `48;5;8`.
+#   `101`:  Bright red background, equivalent to `48;5;9`.
+#   `102`:  Bright green background, equivalent to `48;5;10`.
+#   `103`:  Bright yellow background, equivalent to `48;5;11`.
+#   `104`:  Bright blue background, equivalent to `48;5;12`.
+#   `105`:  Bright magenta background, equivalent to `48;5;13`.
+#   `106`:  Bright cyan background, equivalent to `48;5;14`.
+#   `107`:  Bright white background, equivalent to `48;5;15`.
 
 def sgr(*list)  # "Select Graphic Rendition"
   "\033[#{list.join(';')}m"
