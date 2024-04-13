@@ -23,8 +23,16 @@ class Gettext < Formula
   patch :p0, :DATA
 
   def install
+    def make_arch_flags(arch_array)
+      arch_array.collect { |a| "-arch #{a}" }.join(' ')
+    end
+
     ENV.libxml2
-    ENV.universal_binary if build.universal?
+
+    if build.universal?
+      arch_flags = make_arch_flags Hardware::CPU.universal_archs
+      ENV.universal_binary
+    end
 
     system "./configure", "--disable-dependency-tracking",
                           (ARGV.verbose? ? "--disable-silent-rules" : "--enable-silent-rules"),
@@ -40,7 +48,12 @@ class Gettext < Formula
                           "--without-git",
                           "--without-cvs",
                           "--without-xz",
-                          (build.with? "examples" ? "--with-examples" : "--without-examples")
+                          (build.with?("examples") ? "--with-examples" : "--without-examples"),
+                          *(build.universal? ? ["CC='gcc #{arch_flags}'",
+                          "CXX='g++ #{arch_flags}'",
+                          'CPP=\'gcc -E\'',
+                          'CXXCPP=\'g++ -E\''] : [])
+                          
     system "make"
     system "make", "check"
     ENV.deparallelize # install doesn't support multiple make jobs
