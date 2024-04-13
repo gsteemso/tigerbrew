@@ -23,10 +23,6 @@ class GettextDesperate < Formula
   sha256 "caa44aed29c9b4900f1a401d68f6599a328a3744569484dc95f62081e80ad6cb"
   # switched to the LZip’d version because it’s a lot smaller
 
-#  bottle do
-#    sha256 "c64bb31029e29599442653fe1e0f2216ae8fe144451a0541896f6e367df0018f" => :tiger_altivec
-#  end
-
 #  unless MacOS.version <= :leopard  # what Mac OS version would be correct here?
     keg_only :shadowed_by_osx, "OS X provides the BSD gettext library and some software gets confused if both are in the library path."
 #  end
@@ -40,48 +36,29 @@ class GettextDesperate < Formula
   patch :p0, :DATA
 
   def install
-    build_dir = Dir.getwd
-
-    # fix_library_paths:  A routine to edit any library-reference paths that start with the build
-    # directory so they start with the opt_prefix instead.
-    # • “target” should be a Pathname object indicating the file which is to have its reference
-    #   paths edited.
-    def fix_library_paths(target)
-      target.chmod "a+w"
-      `#{OS::Mac.otool.to_s} -L #{target.to_s}`.lines.select { |s|
-        s =~ /#{build_dir}/
-      }.map { |s|
-        s.match(/#{build_dir}\S+/)
-      }.each do |n|
-        system OS::Mac.install_name_tool.to_s, '-change', n.to_s, n.to_s.sub(build_dir, opt_prefix.to_s), target.to_s
+    def scour_keg(stash, sub_path)
+      s_p = (sub_path == '' ? '' : sub_path + '/')
+      Dir["#{prefix}/#{s_p}*"].each do |f|
+        pn = Pathname(f)
+        spb = s_p + pn.basename
+        if pn.directory?
+          scour_keg(stash, spb)
+        elsif (pn.file? and pn.is_bare_mach_o?)
+          cp pn, "#{stash}/#{spb}"
+        end
       end
-      target.chmod "a-w"
     end
 
-    # merge_built_stuff:  A routine to scrutinize every item in an architecture-specific build
-    # directory.  Mach-O files are installed via the construction of fat binaries, other files are
-    # installed via simple copying, and any subdirectories are recursed into.
-    # • arch_dirs is an array of strings giving architecture-specific pathnames, which are expected
-    #   to have identical lists of contents.
-    # • sub_path is a string giving the path within each arch_dir to the directory to be examined.
-    def merge_built_stuff(arch_dirs, sub_path)
-      Dir["#{arch_dirs.first}/#{sub_path}/*"].each do |f|
-        pn = Pathname.new(f)
-        bn = pn.basename
+    def merge_mach_o_stashes(arch_dirs, sub_path)
+      s_p = (sub_path == '' ? '' : sub_path + '/')
+      Dir["#{arch_dirs.first}/#{s_p}*"].each do |f|
+        pn = Pathname(f)
+        spb = s_p + pn.basename
         if pn.directory?
-          (prefix/sub_path/bn).mkdir
-          merge_built_stuff(arch_dirs, "#{sub_path}/#{bn}")
-        elsif (pn.file? and pn.is_bare_mach_o?)
-          if build.universal?
-            # build the fat binaries directly into place
-            system 'lipo', '-create', *Dir["{#{arch_dirs.join(',')}}/#{sub_path}/#{bn}"],
-                           '-output', (prefix/sub_path/bn).to_s
-          else
-            (prefix/sub_path).install f
-          end
-          fix_library_paths prefix/sub_path/bn
+          merge_mach_o_stashes(arch_dirs, spb)
         else
-          (prefix/sub_path).install f
+          system 'lipo', '-create', *Dir["{#{arch_dirs.join(',')}}/#{spb}"],
+                         '-output', prefix/spb
         end
       end
     end
@@ -100,18 +77,17 @@ class GettextDesperate < Formula
     dirs = []
 
     archs.each do |arch|
-      ENV.append_to_cflags "-arch #{arch}"
-
-      dir = "build-#{arch}"
-      dirs << dir
-      mkdir dir
-      cd dir
+      if build.universal?
+        ENV.append_to_cflags "-arch #{arch}"
+        dir = "build-#{arch}"
+        dirs << dir
+        mkdir dir
+      end
 
       args = %W[
         --disable-dependency-tracking
         --disable-debug
         --prefix=#{prefix}
-        --exec-prefix=#{Dir.pwd}
         --with-included-gettext
         --with-included-libunistring
         --with-emacs
@@ -131,16 +107,12 @@ class GettextDesperate < Formula
       ENV.deparallelize # install doesn't support multiple make jobs
       system 'make', 'install'
 
-      # undo architecture-specific tweak before next run
-      ENV.remove_from_cflags "-arch #{arch}"
-
-      cd '..'
+      if build.universal?
+        # undo architecture-specific tweak before next run
+        ENV.remove_from_cflags "-arch #{arch}"
+        scour_keg(dir, '')
+      end
     end # archs.each
-
-    bin.mkdir
-    merge_built_stuff dirs, 'bin'
-    lib.mkdir
-    merge_built_stuff dirs, 'lib'
 
     # for some reason there are no dylib aliases.  Probably need those.
     cd lib
@@ -152,8 +124,9 @@ class GettextDesperate < Formula
       end
     end
 
-    raise  # debugging aid, lets me check what got moved and whether it was done correctly
+    merge_mach_o_stashes(dirs, '') if build.universal?
 
+    raise  # debugging aid, lets me check what happened and whether it was done correctly
   end # install
 
   test do
