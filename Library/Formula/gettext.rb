@@ -6,10 +6,6 @@ class Gettext < Formula
   sha256 "caa44aed29c9b4900f1a401d68f6599a328a3744569484dc95f62081e80ad6cb"
   # switched to the LZip’d version because it’s a lot smaller
 
-#  bottle do
-#    sha256 "c64bb31029e29599442653fe1e0f2216ae8fe144451a0541896f6e367df0018f" => :tiger_altivec
-#  end
-
   unless MacOS.version <= :leopard  # what Mac OS version would be correct here?
     keg_only :shadowed_by_osx, "OS X provides the BSD gettext library and some software gets confused if both are in the library path."
   end
@@ -23,16 +19,8 @@ class Gettext < Formula
   patch :p0, :DATA
 
   def install
-    def make_arch_flags(arch_array)
-      arch_array.collect { |a| "-arch #{a}" }.join(' ')
-    end
-
     ENV.libxml2
-
-    if build.universal?
-      arch_flags = make_arch_flags Hardware::CPU.universal_archs
-      ENV.universal_binary
-    end
+    ENV.universal_binary if build.universal?
 
     system "./configure", "--disable-dependency-tracking",
                           (ARGV.verbose? ? "--disable-silent-rules" : "--enable-silent-rules"),
@@ -48,12 +36,7 @@ class Gettext < Formula
                           "--without-git",
                           "--without-cvs",
                           "--without-xz",
-                          (build.with?("examples") ? "--with-examples" : "--without-examples"),
-                          *(build.universal? ? ["CC='gcc #{arch_flags}'",
-                          "CXX='g++ #{arch_flags}'",
-                          'CPP=\'gcc -E\'',
-                          'CXXCPP=\'g++ -E\''] : [])
-                          
+                          (build.with?("examples")? "--with-examples" : "--without-examples")
     system "make"
     system "make", "check"
     ENV.deparallelize # install doesn't support multiple make jobs
