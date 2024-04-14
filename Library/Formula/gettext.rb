@@ -11,40 +11,119 @@ class Gettext < Formula
   end
 
   option :universal
-  option "with-examples", "Keep example files"
+  # former option to leave out the examples is no longer available in `configure`
 
   # Fix lang-python-* failures when a traditional French locale
   # https://git.savannah.gnu.org/gitweb/?p=gettext.git;a=patch;h=3c7e67be7d4dab9df362ab19f4f5fa3b9ca0836b
   # Skip the gnulib tests as they have their own set of problems which has nothing to do with what's being built.
   patch :p0, :DATA
 
-  def install
-    ENV.libxml2
-    ENV.universal_binary if build.universal?
+  # `class_exec` doesn't exist in Tiger/Leopard stock Ruby.  Ideally, find a workaround
+  Pathname.class_exec {
+    # binread does not exist in Leopard stock Ruby 1.8.6, and Tigerbrew's
+    # cobbled-in version doesn't work, so use this instead
+    def b_read(offset = 0, length = self.size)
+      self.open('rb') do |f|
+        f.pos = offset
+        f.read(length)
+      end
+    end
 
-    system "./configure", "--disable-dependency-tracking",
-                          (ARGV.verbose? ? "--disable-silent-rules" : "--enable-silent-rules"),
-                          "--disable-debug",
-                          "--prefix=#{prefix}",
-                          "--with-included-gettext",
-                          "--with-included-libunistring",
-                          "--with-emacs",
-                          "--with-lispdir=#{share}/emacs/site-lisp/gettext",
-                          "--disable-java",
-                          "--disable-csharp",
-                          # Don't use VCS systems to create these archives
-                          "--without-git",
-                          "--without-cvs",
-                          "--without-xz",
-                          (build.with?("examples")? "--with-examples" : "--without-examples")
-    system "make"
-    system "make", "check"
-    ENV.deparallelize # install doesn't support multiple make jobs
-    system "make", "install"
-  end
+    def is_bare_mach_o?
+      # MH_MAGIC    = 'feedface'
+      # MH_MAGIC_64 = 'feedfacf' -- same value with lowest-order bit inverted
+      [self.b_read(0,4).unpack('N').first & 0xfffffffe].pack('N').unpack('H8').first == 'feedface'
+    end
+  }
+
+  def install
+    def scour_keg(stash, sub_path)
+      s_p = (sub_path == '' ? '' : sub_path + '/')
+      Dir["#{prefix}/#{s_p}*"].each do |f|
+        pn = Pathname(f)
+        spb = s_p + pn.basename
+        if pn.directory?
+          mkdir "#{stash}/#{spb}"
+          scour_keg(stash, spb)
+        elsif ((not pn.symlink?) and pn.file? and pn.is_bare_mach_o?)
+          cp pn, "#{stash}/#{spb}"
+        end
+      end
+    end
+
+    def merge_mach_o_stashes(arch_dirs, sub_path)
+      s_p = (sub_path == '' ? '' : sub_path + '/')
+      Dir["#{arch_dirs.first}/#{s_p}*"].each do |f|
+        pn = Pathname(f)
+        spb = s_p + pn.basename
+        if pn.directory?
+          merge_mach_o_stashes(arch_dirs, spb)
+        else
+          system 'lipo', '-create', *Dir["{#{arch_dirs.join(',')}}/#{spb}"],
+                         '-output', prefix/spb
+        end
+      end
+    end
+
+    ENV.libxml2
+
+    if build.universal?
+      archs = Hardware::CPU.universal_archs
+      ENV.permit_arch_flags
+    elsif MacOS.prefer_64_bit?
+      archs = [Hardware::CPU.arch_64_bit]
+    else
+      archs = [Hardware::CPU.arch_32_bit]
+    end
+
+    dirs = []
+
+    archs.each do |arch|
+      if build.universal?
+        ENV.append_to_cflags "-arch #{arch}"
+        dir = "build-#{arch}"
+        dirs << dir
+        mkdir dir
+      end
+
+      args = %W[
+        --disable-dependency-tracking
+        --disable-debug
+        --prefix=#{prefix}
+        --with-included-gettext
+        --with-included-libunistring
+        --with-emacs
+        --with-lispdir=#{share}/emacs/site-lisp/gettext
+        --disable-java
+        --disable-csharp
+        --without-git
+        --without-cvs
+        --without-xz
+      ]
+      args << (ARGV.verbose? ? "--disable-silent-rules" : "--enable-silent-rules")
+
+      system './configure', *args
+      system 'make'
+      system 'make', 'check'
+      # install doesn't support multiple make jobs
+      ENV.deparallelize do
+        system 'make', 'install'
+      end
+
+      if build.universal?
+        # undo architecture-specific tweak before next run
+        ENV.remove_from_cflags "-arch #{arch}"
+        scour_keg(dir, '')
+        system 'make', 'clean'
+      end
+    end # archs.each
+
+    merge_mach_o_stashes(dirs, '') if build.universal?
+  end # install
 
   test do
-    system "#{bin}/gettext", "test"
+    system "#{bin}/gettext", '--version'
+    system "#{bin}/gettext", '--help'
   end
 end
 
