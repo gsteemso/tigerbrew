@@ -1,4 +1,5 @@
 class NewerIcu4c < Formula
+  # 58.3 is quite old, but it is the last version that did not /require/ C++11 to build.
   desc "C and C++ libraries for Unicode and globalization"
   homepage "https://icu.unicode.org/"
   url "https://github.com/unicode-org/icu/releases/download/release-58-3/icu4c-58_3-src.tgz"
@@ -50,114 +51,42 @@ class NewerIcu4c < Formula
     # ought to not be installed when the rest of them are.  Don't know how to arrange that except
     # by individually deleting members of a hand-assembled list from `include`.
     cxxheaders = %w[
-      layout/LayoutEngine.h
-      layout/LEFontInstance.h
-      layout/LEGlyphFilter.h
-      layout/LEGlyphStorage.h
-      layout/LEInsertionList.h
-      layout/LELanguages.h
-      layout/LEScripts.h
-      layout/LESwaps.h
-      layout/LETableReference.h
-      layout/ParagraphLayout.h
-      layout/RunArrays.h
-      unicode/alphaindex.h
-      unicode/appendable.h
-      unicode/basictz.h
-      unicode/brkiter.h
-      unicode/bytestream.h
-      unicode/bytestrie.h
-      unicode/bytestriebuilder.h
-      unicode/calendar.h
-      unicode/caniter.h
-      unicode/chariter.h
-      unicode/choicfmt.h
-      unicode/coleitr.h
-      unicode/coll.h
-      unicode/compactdecimalformat.h
-      unicode/curramt.h
-      unicode/currpinf.h
-      unicode/currunit.h
-      unicode/datefmt.h
-      unicode/dbbi.h
-      unicode/dcfmtsym.h
-      unicode/decimfmt.h
-      unicode/dtfmtsym.h
-      unicode/dtintrv.h
-      unicode/dtitvfmt.h
-      unicode/dtitvinf.h
-      unicode/dtptngen.h
-      unicode/dtrule.h
-      unicode/enumset.h
-      unicode/errorcode.h
-      unicode/fieldpos.h
-      unicode/filteredbrk.h
-      unicode/fmtable.h
-      unicode/format.h
-      unicode/fpositer.h
-      unicode/gender.h
-      unicode/gregocal.h
-      unicode/idna.h
-      unicode/listformatter.h
-      unicode/localpointer.h
-      unicode/locdspnm.h
-      unicode/locid.h
-      unicode/measfmt.h
-      unicode/measunit.h
-      unicode/measure.h
-      unicode/messagepattern.h
-      unicode/msgfmt.h
-      unicode/normalizer2.h
-      unicode/normlzr.h
-      unicode/numfmt.h
-      unicode/numsys.h
-      unicode/parsepos.h
-      unicode/plurfmt.h
-      unicode/plurrule.h
-      unicode/rbbi.h
-      unicode/rbnf.h
-      unicode/rbtz.h
-      unicode/regex.h
-      unicode/region.h
-      unicode/reldatefmt.h
-      unicode/rep.h
-      unicode/resbund.h
-      unicode/schriter.h
-      unicode/scientificnumberformatter.h
-      unicode/search.h
-      unicode/selfmt.h
-      unicode/simpletz.h
-      unicode/smpdtfmt.h
-      unicode/sortkey.h
-      unicode/std_string.h
-      unicode/strenum.h
-      unicode/stringpiece.h
-      unicode/stringtriebuilder.h
-      unicode/stsearch.h
-      unicode/symtable.h
-      unicode/tblcoll.h
-      unicode/timezone.h
-      unicode/tmunit.h
-      unicode/tmutamt.h
-      unicode/tmutfmt.h
-      unicode/translit.h
-      unicode/tzfmt.h
-      unicode/tznames.h
-      unicode/tzrule.h
-      unicode/tztrans.h
-      unicode/ucharstrie.h
-      unicode/ucharstriebuilder.h
-      unicode/uchriter.h
-      unicode/unifilt.h
-      unicode/unifunct.h
-      unicode/unimatch.h
-      unicode/unirepl.h
-      unicode/uniset.h
-      unicode/unistr.h
-      unicode/uobject.h
-      unicode/usetiter.h
-      unicode/ustream.h
-      unicode/vtzone.h
+      layout/LayoutEngine.h           layout/LEFontInstance.h              layout/LEGlyphFilter.h
+      layout/LEGlyphStorage.h         layout/LEInsertionList.h             layout/LELanguages.h
+      layout/LEScripts.h              layout/LESwaps.h                     layout/LETableReference.h
+      layout/ParagraphLayout.h        layout/RunArrays.h                   unicode/alphaindex.h
+      unicode/appendable.h            unicode/basictz.h                    unicode/brkiter.h
+      unicode/bytestream.h            unicode/bytestrie.h                  unicode/bytestriebuilder.h
+      unicode/calendar.h              unicode/caniter.h                    unicode/chariter.h
+      unicode/choicfmt.h              unicode/coleitr.h                    unicode/coll.h
+      unicode/compactdecimalformat.h  unicode/curramt.h                    unicode/currpinf.h
+      unicode/currunit.h              unicode/datefmt.h                    unicode/dbbi.h
+      unicode/dcfmtsym.h              unicode/decimfmt.h                   unicode/dtfmtsym.h
+      unicode/dtintrv.h               unicode/dtitvfmt.h                   unicode/dtitvinf.h
+      unicode/dtptngen.h              unicode/dtrule.h                     unicode/enumset.h
+      unicode/errorcode.h             unicode/fieldpos.h                   unicode/filteredbrk.h
+      unicode/fmtable.h               unicode/format.h                     unicode/fpositer.h
+      unicode/gender.h                unicode/gregocal.h                   unicode/idna.h
+      unicode/listformatter.h         unicode/localpointer.h               unicode/locdspnm.h
+      unicode/locid.h                 unicode/measfmt.h                    unicode/measunit.h
+      unicode/measure.h               unicode/messagepattern.h             unicode/msgfmt.h
+      unicode/normalizer2.h           unicode/normlzr.h                    unicode/numfmt.h
+      unicode/numsys.h                unicode/parsepos.h                   unicode/plurfmt.h
+      unicode/plurrule.h              unicode/rbbi.h                       unicode/rbnf.h
+      unicode/rbtz.h                  unicode/regex.h                      unicode/region.h
+      unicode/reldatefmt.h            unicode/rep.h                        unicode/resbund.h
+      unicode/schriter.h              unicode/scientificnumberformatter.h  unicode/search.h
+      unicode/selfmt.h                unicode/simpletz.h                   unicode/smpdtfmt.h
+      unicode/sortkey.h               unicode/std_string.h                 unicode/strenum.h
+      unicode/stringpiece.h           unicode/stringtriebuilder.h          unicode/stsearch.h
+      unicode/symtable.h              unicode/tblcoll.h                    unicode/timezone.h
+      unicode/tmunit.h                unicode/tmutamt.h                    unicode/tmutfmt.h
+      unicode/translit.h              unicode/tzfmt.h                      unicode/tznames.h
+      unicode/tzrule.h                unicode/tztrans.h                    unicode/ucharstrie.h
+      unicode/ucharstriebuilder.h     unicode/uchriter.h                   unicode/unifilt.h
+      unicode/unifunct.h              unicode/unimatch.h                   unicode/unirepl.h
+      unicode/uniset.h                unicode/unistr.h                     unicode/uobject.h
+      unicode/usetiter.h              unicode/ustream.h                    unicode/vtzone.h
     ]
     oh1 "deleting unsafe C++ header files"
     cd include do
