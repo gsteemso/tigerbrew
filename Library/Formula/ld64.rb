@@ -19,6 +19,8 @@ class Ld64 < Formula
     sha256 "48e3475bd73f9501d17b7d334d3bf319f5664f2d5ab9d13378e37c2519ae2a3a"
   end
 
+  option :universal
+
   depends_on MaximumMacOSRequirement => :snow_leopard
 
   # Tiger either includes old versions of these headers,
@@ -55,6 +57,8 @@ class Ld64 < Formula
   end
 
   def install
+    ENV.universal_binary if build.universal?
+
     buildpath.install resource("makefile")
     mv "Makefile-97", "Makefile"
     inreplace "src/ld/Options.cpp", "@@VERSION@@", version

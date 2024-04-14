@@ -14,6 +14,8 @@ class Openssh < Formula
   # Please don't resubmit the keychain patch option. It will never be accepted.
   # https://archive.is/hSB6d#10%25
 
+  option :universal
+
   depends_on "pkg-config" => :build
   depends_on "ldns"
   depends_on "openssl3"
@@ -38,6 +40,8 @@ class Openssh < Formula
   end
 
   def install
+    ENV.universal_binary if build.universal?
+
     args = %W[
       --prefix=#{prefix}
       --sysconfdir=#{etc}/ssh
