@@ -22,13 +22,9 @@ class Gsasl < Formula
   end
 
   def install
-    args = %W[
-      --prefix=#{prefix}
-      --disable-dependency-tracking
-      --with-gssapi-impl=mit
-    ]
-
-    system "./configure", *args
+    system "./configure", "--disable-dependency-tracking",
+                          "--with-gssapi-impl=mit",
+                          "--prefix=#{prefix}"
     system "make", "install"
   end
 

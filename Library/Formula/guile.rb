@@ -6,6 +6,13 @@ class Guile < Formula
   sha256 "aed0a4a6db4e310cbdfeb3613fa6f86fddc91ef624c1e3f8937a6304c69103e2"
   revision 3
 
+  bottle do
+    sha256 "d7e7ad8d491f84c1405b82ee8ef0da5b21f551b6a0f2795bae92e8bec2f19be2" => :el_capitan
+    sha256 "8e4d3e402e6eb6d95dcfc308b067beb3f7bed522e801c04f2291ffb29aab8908" => :yosemite
+    sha256 "c62b53570f7ac7061820c2c3009c649ff7fbf176bddd0acc36802303ede235e2" => :mavericks
+    sha256 "51f5f379e25fab5cf8fb7cede02841aa716c0e90356705be2abc6a18c6af5371" => :mountain_lion
+  end
+
   head do
     url "http://git.sv.gnu.org/r/guile.git"
 
@@ -34,12 +41,9 @@ class Guile < Formula
 
   def install
     system "./autogen.sh" if build.head?
-    args = %W[
-      --prefix=#{prefix}
-      --disable-dependency-tracking
-      --with-libreadline-prefix=#{Formula["readline"].opt_prefix}
-    ]
-    system "./configure", *args
+    system "./configure", "--disable-dependency-tracking",
+                          "--prefix=#{prefix}",
+                          "--with-libreadline-prefix=#{Formula["readline"].opt_prefix}"
     system "make", "install"
 
     # A really messed up workaround required on OS X --mkhl
@@ -53,8 +57,8 @@ class Guile < Formula
   test do
     hello = testpath/"hello.scm"
     hello.write <<-EOS.undent
-      (display "Hello World")
-      (newline)
+    (display "Hello World")
+    (newline)
     EOS
 
     ENV["GUILE_AUTO_COMPILE"] = "0"

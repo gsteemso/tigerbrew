@@ -9,31 +9,23 @@ class Findutils < Formula
     sha256 "9a4f2d8a09718df3da29ba5bdca5eb4c92cf28b00163966bea7ccd005c7188db" => :tiger_altivec
   end
 
-  def caveats; <<-EOS.undent
-      All commands (and their manpages) are installed with a leading "g" on their names, because
-      Mac OS X already includes commands with most of the normal names.  The sole exception, the
-      realpath command (with its manpage), is also made available by its normal name.
-    EOS
-  end
+  deprecated_option "default-names" => "with-default-names"
+
+  option "with-default-names", "Do not prepend 'g' to the binary"
 
   def install
-    args = %W[
-      --prefix=#{prefix}
-      --disable-dependency-tracking
-      --disable-debug
-      --localstatedir=#{var}/locate
-      --program-prefix=g
-    ]
+    args = ["--prefix=#{prefix}",
+            "--localstatedir=#{var}/locate",
+            "--disable-dependency-tracking",
+            "--disable-debug"]
+    args << "--program-prefix=g" if build.without? "default-names"
 
     system "./configure", *args
     system "make", "install"
-
-    # Symlink non-conflicting binaries
-    bin.install_symlink "grealpath" => "realpath"
-    man1.install_symlink "grealpath.1" => "realpath.1"
   end
 
   test do
-    system "#{bin}/gfind", "--version"
+    _find = (build.with? 'default-names' ? 'find' : 'gfind')
+    system bin/_find, "--version"
   end
 end

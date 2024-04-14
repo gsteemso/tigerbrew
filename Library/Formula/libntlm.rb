@@ -11,7 +11,7 @@ class Libntlm < Formula
 
   def caveats
     <<-EOS.undent
-      The NTLM protocol is quite weakly encrypted.  Libntlm should only be used for
+      The NTLM protocol is quite weakly encrypted.  LibNTLM should only be used for
       interoperability, never for security.
     EOS
   end
