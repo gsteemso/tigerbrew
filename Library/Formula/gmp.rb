@@ -39,6 +39,12 @@ class Gmp < Formula
 
     build_cpu = Hardware::CPU.family
     tuple_trailer = "apple-darwin#{`uname -r`}"
+    libgmp_endings = %w[
+      .10.dylib
+      .a
+      xx.4.dylib
+      xx.a
+    ]
 
     ENV.cxx11 if build.cxx11?
 
@@ -72,52 +78,44 @@ class Gmp < Formula
       end
       args << "ABI=#{mode}"
 
-      dir = "build-#{arch}"
-      dirs << dir
-      mkdir dir
-      cd dir
+      if build.universal?
+        dir = "build-#{arch}"
+        dirs << dir
+        mkdir dir
+      end
 
       args = %W[
         --prefix=#{prefix}
-        --exec-prefix=#{Dir.pwd}
         --enable-cxx
         --build=#{cpu_lookup(build_cpu)}-#{tuple_trailer}
         --host=#{cpu_lookup(host_sym)}-#{tuple_trailer}
       ]
       args << (ARGV.verbose? ? '--disable-silent-rules' : '--enable-silent-rules')
 
-      system '../configure', *args
+      system './configure', *args
       system 'make'
       system 'make', 'check'
       ENV.deparallelize
       system 'make', 'install'
 
-      # gmp.h is architecture-dependent; in the case of installing :universal, this copy will be
-      # used when merging them all together
-      system 'cp', 'include/gmp.h', "../per_arch_gmp_h/#{arch}"
+      if build.universal?
+        cp *Dir["#{lib}/libgmp#{libgmp_endings.join(',')}"], dir
+
+        # gmp.h is architecture-dependent; this copy will be used when merging them
+        cp include/'gmp.h', "per_arch_gmp_h/#{arch}"
+      end
 
       # undo architecture-specific tweaks before next run
       ENV.remove_from_cflags "-arch #{arch}"
       ENV.remove 'HOMEBREW_ARCHFLAGS', '-m32' if (arch == :i386 or arch == :ppc)
       ENV.remove_from_cflags '-force_cpusubtype_ALL' if arch == :ppc64
-
-      cd '..'
     end # archs.each
 
-    lib.mkdir
-
     if build.universal?
-      # build the fat libraries directly into place
-      system 'lipo', '-create', *Dir["{#{dirs.join(',')}}/lib/libgmp.10.dylib"],
-                     '-output', lib/'libgmp.10.dylib'
-      system 'lipo', '-create', *Dir["{#{dirs.join(',')}}/lib/libgmp.a"],
-                     '-output', lib/'libgmp.a'
-      system 'lipo', '-create', *Dir["{#{dirs.join(',')}}/lib/libgmpxx.4.dylib"],
-                     '-output', lib/'libgmpxx.4.dylib'
-      system 'lipo', '-create', *Dir["{#{dirs.join(',')}}/lib/libgmpxx.a"],
-                     '-output', lib/'libgmpxx.a'
-      # grab the symlinks too
-      lib.install Dir["#{dirs.first}/lib/lib*"].select { |s| Pathname.new(s).symlink? }
+      libgmp_endings.each do |e|
+        system 'lipo', '-create', *Dir["{#{dirs.join(',')}}/libgmp#{e}"],
+                       '-output', lib/"libgmp#{e}"
+      end
 
       # The system-specific gmp.h files need to be surgically combined.  They were stashed in
       # ./per_arch_gmp_h/ for this purpose.  The differences are minor and can be “#if defined ()”
@@ -167,17 +165,7 @@ class Gmp < Formula
         basis_lines[diff_start..diff_end] = adjusted_lines
       end
 
-      File.new((include/'gmp.h').to_path, 'w', 0644).write basis_lines.join('')
-    else
-      lib.install Dir["#{dirs.first}/lib/lib*"]
-      include.install "#{dirs.first}/include/gmp.h"
-    end
-
-    # install & fix up the pkgconfig files, which still expect the libraries to be in the build
-    # directory after they have been moved:
-    lib.install "#{dirs.first}/lib/pkgconfig"
-    Dir["#{lib}/pkgconfig/*"].each do |f|
-      system 'sed', '-e', '/^exec_prefix=/d', '-e', 's/exec_prefix/prefix/g', f
+      File.new(include/'gmp.h', 'w', 0644).write basis_lines.join('')
     end
   end
 
