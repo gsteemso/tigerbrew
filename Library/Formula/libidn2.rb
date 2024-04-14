@@ -11,6 +11,8 @@ class Libidn2 < Formula
     sha256 "443cafce41e04212d9d44d283ed1efed6df3955f86346543ebf761cd18153e23" => :tiger_altivec
   end
 
+  option :universal
+
   head do
     url "https://gitlab.com/libidn/libidn2.git", branch: "master"
 
@@ -28,6 +30,8 @@ class Libidn2 < Formula
   depends_on "gettext"
 
   def install
+    ENV.universal_binary if build.universal?
+
     args = ["--disable-silent-rules", "--with-packager=Homebrew", "--prefix=#{prefix}"]
     args << "--with-libintl-prefix=#{Formula["gettext"].opt_prefix}"
 
