@@ -1,18 +1,17 @@
 class Libunistring < Formula
   desc "C string library for manipulating Unicode strings"
   homepage "https://www.gnu.org/software/libunistring/"
-  url "http://ftpmirror.gnu.org/libunistring/libunistring-0.9.6.tar.xz"
-  mirror "https://ftp.gnu.org/gnu/libunistring/libunistring-0.9.6.tar.xz"
-  sha256 "2df42eae46743e3f91201bf5c100041540a7704e8b9abfd57c972b2d544de41b"
+  url "http://ftpmirror.gnu.org/libunistring/libunistring-1.2.tar.gz"
+  mirror "https://ftp.gnu.org/gnu/libunistring/libunistring-1.2.tar.gz"
+  sha256 "fd6d5662fa706487c48349a758b57bc149ce94ec6c30624ec9fdc473ceabbc8e"
 
-  bottle do
-    cellar :any
-    sha256 "45c12000e1d272442f1f3f526164c189ee2a54a620ba47e52f8497b5c5678b06" => :tiger_altivec
-  end
+  option :universal
 
   def install
+    ENV.universal_binary if build.universal?
+
     system "./configure", "--disable-dependency-tracking",
-                          "--disable-silent-rules",
+                          (ARGV.verbose? ? '--disable-silent-rules' : '--enable-silent-rules'),
                           "--prefix=#{prefix}"
     system "make"
     system "make", "install"

@@ -4,11 +4,6 @@ class LibatomicOps < Formula
   url "https://github.com/ivmai/libatomic_ops/releases/download/v7.8.2/libatomic_ops-7.8.2.tar.gz"
   sha256 "d305207fe207f2b3fb5cb4c019da12b44ce3fcbc593dfd5080d867b1a2419b51"
 
-# version 7.8.0:
-# bottle do
-#   sha256 "f84912cc7945b0be19837621bac395d883ccd764c111431be32ce11fff4dbb05" => :tiger_altivec
-# end
-
   patch :p0, :DATA
 
   option :universal
@@ -20,9 +15,8 @@ class LibatomicOps < Formula
       --prefix=#{prefix}
       --disable-dependency-tracking
       --enable-shared
-      --enable-assertions
     ]
-    args << "--disable-silent-rules" if ARGV.verbose?
+    args << (ARGV.verbose? ? '--disable-silent-rules' : '--enable-silent-rules')
 
     system "./configure", *args
     system "make"
