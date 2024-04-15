@@ -66,6 +66,7 @@ class CAres < Formula
     if build.universal?
       ENV.permit_arch_flags
       archs = Hardware::CPU.universal_archs
+      mkdir 'ares_build-h'
     elsif MacOS.prefer_64_bit?
       archs = [Hardware::CPU.arch_64_bit]
     else
@@ -89,8 +90,12 @@ class CAres < Formula
       system "./configure", "--prefix=#{prefix}",
                             "--disable-dependency-tracking",
                             "--disable-debug",
-                            "--enable-symbol-hiding"
-      system "make", "install"
+                            '--enable-symbol-hiding',
+                            '--enable-nonblocking'
+      system "make"
+      ENV.deparallelize do
+        system "make", "install"
+      end
 
       if build.universal?
         # undo architecture-specific tweaks before next run
@@ -102,17 +107,81 @@ class CAres < Formula
               ENV.remove 'LDFLAGS', "-arch #{Hardware::CPU.arch_32_bit}"
             end
           when :x86_64, :ppc64
-            ENV.remove "HOMEBREW_ARCHFLAGS", "-m64"
+            ENV.remove 'HOMEBREW_ARCHFLAGS', '-m64'
             unless superenv?
               ENV.remove 'LDFLAGS', "-arch #{Hardware::CPU.arch_64_bit}"
             end
-        end
+        end # case arch
+
         scour_keg(dir, '')
+        # ares_build.h is architecture-dependent; when installing :universal, this copy will be
+        # used in merging them all together
+        cp include/'ares_build.h', "ares_build-h/#{arch}"
+
         system 'make', 'clean'
-      end
-    end
-    merge_mach_o_stashes(dirs, '') if build.universal?
-  end
+      end # if build.universal?
+    end # archs.each do
+
+    if build.universal?
+      merge_mach_o_stashes(dirs, '')
+
+      # The system-specific ares_build.h files need to be surgically combined.  They were stashed
+      # for this purpose.  The differences are minor and can be “#if defined ()” together.
+      basis_file = "ares_build-h/#{archs.first}"
+      diffpoints = {}  # Keyed by line number in the basis file.  Each value is an array, of three‐
+                       # element hashes; containing the arch, the hunk length, and an array of the
+                       # lines composing it.
+      archs[1..-1].each do |a|
+        raw_diffs = `diff --unified=0 #{basis_file} ares_build-h/#{a}`
+        # the unified diff output begins each hunk with a line that looks like:
+        # @@ -line_number, length_in_lines +line_number,length_in_lines @@
+        diff_hunks = raw_diffs.lines[2..-1].join('').split(/(?=^@@)/)
+        diff_hunks.each do |d|
+          # lexical sorting of numbers requires that they all be the same length
+          base_linenumber_string = ('00000' + d.match(/\A@@ -(\d+)/)[1])[-5..-1]
+          unless diffpoints.has_key?(base_linenumber_string)
+            diffpoints[base_linenumber_string] = []
+          end
+          length_match = d.match(/\A@@ -\d+,(\d+)/)
+          # if the hunk length is 1, the comma and second number are not present
+          length_match = (length_match == nil ? 1 : length_match[1].to_i)
+          line_group = []
+          # shave off the leading +/-/space
+          d.lines { |line| line_group << line[1..-1] if line =~ /^\+/ }
+          diffpoints[base_linenumber_string] << {
+            :arch => a,
+            :displacement => length_match,
+            :hunk_lines => line_group
+          }
+        end # diff_hunks.each do
+      end # archs.each do
+      # Ideally the algorithm would account for overlapping and/or different-length hunks at this
+      # point; but since that doesn't appear to be a thing that C-ARES generates in the first place,
+      # and would in any case only become relevant if "REALLY universal" triple-or-more fat
+      # binaries are implemented, it can wait.
+
+      basis_lines = []
+      File.open(basis_file, 'r') { |text| basis_lines = text.read.lines[0..-1] }
+      # bear in mind that the line-array indices are one less than the line numbers
+
+      # start with the last diff point so that the insertions don't screw up our line numbering
+      diffpoints.keys.sort.reverse.each do |index_string|
+        diff_start = index_string.to_i - 1
+        diff_end = index_string.to_i + diffpoints[index_string][0][:displacement] - 2
+        adjusted_lines = [
+          "\#if defined (__#{archs.first}__)\n",
+          basis_lines[diff_start..diff_end],
+          *(diffpoints[index_string].map { |d|
+              [ "\#elif defined (__#{d[:arch]}__)\n", *(d[:hunk_lines]) ]
+            }),
+          "\#endif\n"
+        ]
+        basis_lines[diff_start..diff_end] = adjusted_lines
+      end # keys.each do
+
+      File.new((include/'ares_build.h').to_path, 'w', 0644).write basis_lines.join('')
+    end # if build.universal?
+  end # def install
 
   test do
     (testpath/"test.c").write <<-EOS.undent
