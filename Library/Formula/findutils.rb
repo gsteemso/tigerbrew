@@ -25,7 +25,7 @@ class Findutils < Formula
   end
 
   test do
-    _find = (build.with? 'default-names' ? 'find' : 'gfind')
+    _find = (build.with?('default-names') ? 'find' : 'gfind')
     system bin/_find, "--version"
   end
 end
