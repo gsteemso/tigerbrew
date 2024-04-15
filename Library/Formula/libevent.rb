@@ -18,12 +18,12 @@ class Libevent < Formula
     depends_on "libtool" => :build
   end
 
+  option :universal
+  option "with-doxygen", "Build and install the manpages (using Doxygen)"
+
   depends_on "doxygen" => [:optional, :build]
   depends_on "pkg-config" => :build
   depends_on "openssl3"
-
-  option :universal
-  option "with-doxygen", "Build and install the manpages (using Doxygen)"
 
   deprecated_option "enable-manpages" => "with-doxygen"
 

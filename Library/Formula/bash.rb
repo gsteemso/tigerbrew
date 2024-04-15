@@ -1,7 +1,7 @@
 class Bash < Formula
   desc "Bourne-Again SHell, a UNIX command interpreter"
   homepage "https://www.gnu.org/software/bash/"
-  url "https://ftp.gnu.org/gnu/bash/bash-5.2.21.tar.gz"
+  url "http://ftpmirror.gnu.org/bash/bash-5.2.21.tar.gz"
   mirror "https://mirrors.ocf.berkeley.edu/gnu/bash/bash-5.2.21.tar.gz"
   mirror "https://mirrors.kernel.org/gnu/bash/bash-5.2.21.tar.gz"
   sha256 "c8e31bdc59b69aaffc5b36509905ba3e5cbb12747091d27b4b977f078560d5b8"

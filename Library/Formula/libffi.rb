@@ -4,15 +4,15 @@ class Libffi < Formula
   url "https://github.com/libffi/libffi/releases/download/v3.4.4/libffi-3.4.4.tar.gz"
   sha256 "d66c56ad259a82cf2a9dfc408b32bf5da52371500b84745f7fb8b645712df676"
 
+  bottle do
+    sha256 "f73c477afbca66cf30dd489efa3177fa89ace748e11bd1fd1b6395eeb18a969e" => :tiger_altivec
+  end
+
   head do
     url "https://github.com/atgreen/libffi.git"
     depends_on "autoconf" => :build
     depends_on "automake" => :build
     depends_on "libtool" => :build
-  end
-
-  bottle do
-    sha256 "f73c477afbca66cf30dd489efa3177fa89ace748e11bd1fd1b6395eeb18a969e" => :tiger_altivec
   end
 
   keg_only :provided_by_osx, "Some formulae require a newer version of libffi." if MacOS.version > :tiger

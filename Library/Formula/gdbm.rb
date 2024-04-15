@@ -1,8 +1,9 @@
 class Gdbm < Formula
   desc "GNU database manager"
   homepage "https://www.gnu.org/software/gdbm/"
-  url "https://ftp.gnu.org/gnu/gdbm/gdbm-1.23.tar.gz"
-  mirror "http://ftpmirror.gnu.org/gdbm/gdbm-1.23.tar.gz"
+  # audit --strict complains about these URLs
+  url "http://ftpmirror.gnu.org/gdbm/gdbm-1.23.tar.gz"
+  mirror "https://ftp.gnu.org/gnu/gdbm/gdbm-1.23.tar.gz"
   sha256 "74b1081d21fff13ae4bd7c16e5d6e504a4c26f7cde1dca0d963a484174bbcacd"
 
   bottle do
@@ -12,6 +13,10 @@ class Gdbm < Formula
 
   option :universal
   option "with-libgdbm-compat", "Build libgdbm_compat, a compatibility layer which provides UNIX-like dbm and ndbm interfaces."
+
+  if build.with? 'libgdbm-compat'
+    keg_only :provided_by_osx, 'libgdbm_compat installs a header that shadows a system header.'
+  end
 
   depends_on "readline"
 
@@ -23,7 +28,6 @@ class Gdbm < Formula
       --disable-silent-rules
       --prefix=#{prefix}
     ]
-
     args << "--enable-libgdbm-compat" if build.with? "libgdbm-compat"
 
     system "./configure", *args

@@ -1,7 +1,8 @@
 class Libiconv < Formula
   desc "Conversion library"
   homepage "https://www.gnu.org/software/libiconv/"
-  url "https://ftpmirror.gnu.org/libiconv/libiconv-1.17.tar.gz"
+  # audit --strict complained about this URL
+  url "http://ftpmirror.gnu.org/libiconv/libiconv-1.17.tar.gz"
   mirror "https://ftp.gnu.org/gnu/libiconv/libiconv-1.17.tar.gz"
   sha256 "8f74213b56238c85a50a5329f77e06198771e70dd9a739779f4c02f65d971313"
 
