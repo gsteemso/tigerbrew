@@ -1,7 +1,8 @@
 class Gettext < Formula
   desc "GNU internationalization (i18n) and localization (l10n) library"
   homepage "https://www.gnu.org/software/gettext/"
-  url "https://ftpmirror.gnu.org/gettext/gettext-0.22.5.tar.lz"
+  # audit --strict complained about this URL.
+  url "http://ftpmirror.gnu.org/gettext/gettext-0.22.5.tar.lz"
   mirror "https://ftp.gnu.org/gnu/gettext/gettext-0.22.5.tar.lz"
   sha256 "caa44aed29c9b4900f1a401d68f6599a328a3744569484dc95f62081e80ad6cb"
   # switched to the LZip’d version because it’s a lot smaller
