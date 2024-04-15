@@ -11,11 +11,11 @@ class Cunit < Formula
     sha1 "a4fa117d4d1ba31a42b41645324919defea49f16" => :mountain_lion
   end
 
+  option :universal
+
   depends_on "autoconf" => :build
   depends_on "automake" => :build
   depends_on "libtool" => :build
-
-  option :universal
 
   def install
     ENV.universal_binary if build.universal?
