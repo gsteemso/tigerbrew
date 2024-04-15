@@ -17,8 +17,6 @@ class Libssh2 < Formula
     sha256 "8295d09fcdd5f7db92976920717c527c71da0a57d62f436d2204b5a7903c6cd7"
   end
 
-  option "with-libressl", "build with LibreSSL instead of OpenSSL"
-
   head do
     url "https://github.com/libssh2/libssh2.git"
 
@@ -26,6 +24,8 @@ class Libssh2 < Formula
     depends_on "automake" => :build
     depends_on "libtool" => :build
   end
+
+  option "with-libressl", "build with LibreSSL instead of OpenSSL"
 
   depends_on "openssl3" => :recommended
   depends_on "libressl" => :optional
