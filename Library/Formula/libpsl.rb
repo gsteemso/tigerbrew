@@ -1,20 +1,29 @@
 class Libpsl < Formula
-  desc "C library for the Public Suffix List"
-  homepage "rockdaboot.github.io/libpsl"
-  url "https://github.com/rockdaboot/libpsl/archive/refs/tags/0.21.5.tar.gz"
-  version "0.21.5"
-  sha256 "d6717685a5f221403041907cca98ae9f72aef163b9d813d40d417c2663373a32"
+  desc 'C library for the Public Suffix List'
+  homepage 'rockdaboot.github.io/libpsl'
+  url 'https://github.com/rockdaboot/libpsl/releases/download/0.21.5/libpsl-0.21.5.tar.lz'
+  sha256 '9a9f6a8c6edba650cf9ea55475cd172dd28487316804e9c73202d97572cd3a2d'
+
+  depends_on 'libidn2'
+  depends_on 'libunistring'
+  depends_on :python
 
   def install
-    # ENV.deparallelize  # if your formula fails when building in parallel
+    args = %W[
+      --disable-dependency-tracking
+      --prefix=#{prefix}
+      --disable-gtk-doc
+      --enable-man
+      --enable-ubsan
+      --enable-asan
+      --enable-builtin
+    ]
+    args << (ARGV.verbose? ? '--disable-silent-rules' : '--enable-silent-rules')
 
-    system "./configure", "--disable-debug",
-                          "--disable-dependency-tracking",
-                          "--disable-silent-rules",
-                          "--prefix=#{prefix}"
-    system "make"
-    system "make", "check"
-    system "make", "install"
+    system './configure', *args
+    system 'make'
+    system 'make', 'check'
+    system 'make', 'install'
   end
 
   test do
