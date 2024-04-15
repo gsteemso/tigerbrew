@@ -20,24 +20,16 @@ class Icu4c < Formula
 
   def install
     ENV.universal_binary if build.universal?
-
     # Tiger's libtool chokes if it's passed -w
     ENV.enable_warnings if MacOS.version < :leopard
 
-    args = %W[
-      --prefix=#{prefix}
-      --disable-samples
-      --enable-static
-      --with-data-packaging=archive
-    ]
-    # "data-packaging=archive" per recommendations in the package for building a system library
+    ENV.cxx11 if build.cxx11?
 
+    args = ["--prefix=#{prefix}", "--disable-samples", "--enable-static"]
     args << "--with-library-bits=64" if MacOS.prefer_64_bit?
 
-    # Per the instructions in the package, when building a system library these should be set:
-    ENV["CPPFLAGS"] = "-DU_CHARSET_IS_UTF8=1 -DU_DISABLE_RENAMING=1"
-    # Some of those could also be done by arguments to runConfigureICU, but that method elicits
-    # irritating and unhelpful usage warnings.
+    ENV['CPPFLAGS'] = '-DU_CHARSET_IS_UTF8=1'
+    # Could also be done in *args, but that elicits irritating and unhelpful usage warnings.
 
     cd "source" do
       system "./runConfigureICU", "MacOSX", *args
@@ -51,17 +43,17 @@ class Icu4c < Formula
     # The generated dylibs unpredictably refer to some or all of their required libraries using the
     # "@loader_path" syntax, which ld refuses to recognize even though it wrote them that way.  Not
     # even Tigerbrew’s newer ld64 works.  Work around this by editing any such link names:
-    oh1 "verifying that dynamic libraries are linked correctly"
+    oh1 'verifying that dynamic libraries are linked correctly'
     Dir["#{opt_lib}/*.#{version}.dylib"].each do |l|
-      FileUtils::chmod "a+w", l
+      FileUtils::chmod 'a+w', l
       `#{OS::Mac.otool.to_s} -L #{l}`.lines.select { |s|
         s =~ /\@loader_path/
       }.map { |s|
         s.match(/\@loader_path\S+/)
       }.each do |n|
-        system OS::Mac.install_name_tool.to_s, "-change", n, n.to_s.sub("@loader_path", opt_lib), l
+        system OS::Mac.install_name_tool.to_s, '-change', n, n.to_s.sub('@loader_path', opt_lib), l
       end
-      FileUtils::chmod "a-w", l
+      FileUtils::chmod 'a-w', l
     end
   end
 
