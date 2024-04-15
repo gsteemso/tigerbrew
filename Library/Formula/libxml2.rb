@@ -22,19 +22,6 @@ class Libxml2 < Formula
 
   keg_only :provided_by_osx
 
-  def caveats
-    if build.with? "python"
-      <<-EOS.undent
-        The Python installer warns loudly of a failed test.  While the warning is,
-        technically, correct, it is misleading – this is a keg-only brew and your
-        Python is not _supposed_ to be able to see it without help.
-
-        Put briefly:  Ignore the huge, strident failure message -- the installation
-        is, in fact, successful.
-      EOS
-    end
-  end
-
   def install
     ENV.deparallelize
     ENV.universal_binary if build.universal?
@@ -50,7 +37,7 @@ class Libxml2 < Formula
       --with-lzma=#{Formula["xz"].opt_prefix}
       --with-zlib=#{Formula["zlib"].opt_prefix}
     ]
-    args << '--with-icu' unless build.without? 'icu4c'
+    args << "--with-icu=#{Formula["icu4c"].opt_prefix}" if build.with? 'icu4c'
     # the package builds the python bindings by default
     args << "--without-python" if build.without? "python"
 
@@ -65,6 +52,19 @@ class Libxml2 < Formula
         inreplace "setup.py", "includes_dir = [", "includes_dir = ['#{include}', '#{MacOS.sdk_path}/usr/include',"
         system "python3", "setup.py", "install", "--prefix=#{prefix}"
       end
+    end
+  end
+
+  def caveats
+    if build.with? "python"
+      <<-EOS.undent
+        The Python installer warns loudly of a failed test.  While the warning is,
+        technically, correct, it is misleading – this is a keg-only brew and your
+        Python is not _supposed_ to be able to see it without help.
+
+        Put briefly:  Ignore the huge, strident failure message -- the installation
+        is, in fact, successful.
+      EOS
     end
   end
 
