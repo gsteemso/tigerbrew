@@ -8,7 +8,7 @@ class Python3 < Formula
     sha256 "eaebc29ef8cd0b64b4032694e68c7f8b95352cc790f457c9fd5a3d4bb76f93ab" => :tiger_altivec
   end
 
-  option :universal
+  option :universal if Hardware::CPU.intel?
 
   depends_on "pkg-config" => :build
   depends_on "readline" => :recommended
@@ -289,6 +289,13 @@ class Python3 < Formula
       xy = version.to_s.slice(/(3\.\d\d)/) || "3.10"
     end
     text = <<~EOS
+      By design, it is not possible to do a PowerPC-only universal build of Python.
+      Multi-platform builds that enable either or both of 32-bit and 64-bit execution
+      on both PowerPC and Intel Macs, or 64-bit execution on both Intel and ARM, are
+      supported by the Python source-code package, but cannot be built by Tigerbrew.
+      The “universal” option to this formula is therefore only provided on Intel-
+      compatible machines.
+
       Python has been installed as
         #{HOMEBREW_PREFIX}/bin/python3
 
