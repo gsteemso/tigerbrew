@@ -3,8 +3,8 @@
 class Rtmpdump < Formula
   desc "Tool and library for downloading RTMP streaming media"
   homepage "https://rtmpdump.mplayerhq.hu"
-  head "git://git.ffmpeg.org/rtmpdump"
   version "2.6"
+  head "git://git.ffmpeg.org/rtmpdump"
 
   option :universal
 
@@ -13,11 +13,11 @@ class Rtmpdump < Formula
   depends_on :ld64 if MacOS.version < :leopard
   depends_on "openssl"
 
-# is this still true?  hells if I know
-#  fails_with :llvm do
-#    build 2336
-#    cause "Crashes at runtime"
-#  end
+  # is this still true?  hells if I know
+  fails_with :llvm do
+    build 2336
+    cause "Crashes at runtime"
+  end
 
   def install
     ENV.universal_binary if build.universal?

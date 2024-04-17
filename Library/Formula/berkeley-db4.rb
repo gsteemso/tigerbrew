@@ -30,18 +30,11 @@ class BerkeleyDb4 < Formula
     def is_bare_mach_o?
       # MH_MAGIC    = 'feedface'
       # MH_MAGIC_64 = 'feedfacf' -- same value with lowest-order bit inverted
+      self.file? and
+      self.size >= 4 and
       [self.b_read(0,4).unpack('N').first & 0xfffffffe].pack('N').unpack('H8').first == 'feedface'
     end
   }
-
-  def arg_format(arch)
-    case arch
-      when :x86_64 then 'darwin64-x86_64-cc'
-      when :i386   then 'darwin-i386-cc'
-      when :ppc    then 'darwin-ppc-cc'
-      when :ppc64  then 'darwin64-ppc-cc'
-    end
-  end
 
   def install
     def scour_keg(stash, sub_path)
@@ -52,7 +45,7 @@ class BerkeleyDb4 < Formula
         if pn.directory?
           mkdir "#{stash}/#{spb}"
           scour_keg(stash, spb)
-        elsif ((not pn.symlink?) and pn.file? and pn.is_bare_mach_o?)
+        elsif ((not pn.symlink?) and pn.is_bare_mach_o?)
           cp pn, "#{stash}/#{spb}"
         end
       end
