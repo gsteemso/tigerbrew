@@ -25,6 +25,7 @@ class Libssh2 < Formula
     depends_on "libtool" => :build
   end
 
+  option :universal
   option "with-libressl", "build with LibreSSL instead of OpenSSL"
 
   depends_on "openssl3" => :recommended
@@ -32,6 +33,8 @@ class Libssh2 < Formula
   depends_on "zlib"
 
   def install
+    ENV.universal_binary if build.universal?
+
     args = %W[
       --prefix=#{prefix}
       --disable-debug
