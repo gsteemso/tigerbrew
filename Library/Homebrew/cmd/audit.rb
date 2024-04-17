@@ -1098,7 +1098,7 @@ class ResourceAuditor
 
       if p =~ %r{^https?://prdownloads\.}
         problem "Don't use prdownloads in SourceForge urls (url is #{p}).\n" \
-                "\tSee: http://librelist.com/browser/homebrew/2011/1/12/prdownloads-is-bad/"
+                "\tSee: http://web.archive.org/web/20150331223936/http://librelist.com/browser/homebrew/2011/1/12/prdownloads-is-bad#1c7e7d351834e410c36c79b0947529d8"
       end
 
       if p =~ %r{^http://\w+\.dl\.}
