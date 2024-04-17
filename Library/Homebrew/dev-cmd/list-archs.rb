@@ -2,11 +2,11 @@ SIGNATURES = {
   'cafebabe' => :FAT_MAGIC,
   'feedface' => :MH_MAGIC,
   'feedfacf' => :MH_MAGIC_64,
-  '7f454c46' => :MH_ELF,
+  '7f454c46' => :ELF_H,
   'bebafeca' => :FAT_CIGAM,
   'cefaedfe' => :MH_CIGAM,
   'cffaedfe' => :MH_CIGAM_64,
-  '464c457f' => :MH_FLE,
+  '464c457f' => :FLE_H,
 }.freeze
 
 CPU_TYPES = {
@@ -199,12 +199,32 @@ class Pathname
   end
 
   def mach_o_signature?
-    SIGNATURES[self.b_read(0, 4).unpack('H8')[0]]
+    self.file? and
+    self.size >= 4 and
+    SIGNATURES[self.b_read(0, 4).unpack('H8').first]
   end
 end # Pathname
 
 module Homebrew
   def list_archs
+    def scour(in_here)
+      possibles = []
+      Dir["#{in_here}/{*,.*}"].reject { |f|
+        f =~ /\/\.{1,2}$/
+      }.map { |m|
+        Pathname.new(m)
+      }.each do |pn|
+        unless pn.symlink?
+          if pn.directory?
+            possibles += scour(pn)
+          elsif pn.mach_o_signature?
+            possibles << pn
+          end
+        end # unless symlink?
+      end # each |pn|
+      possibles
+    end # scour
+
     requested = ARGV.kegs
     if requested.empty?
       onoe 'Only installed formulae have anything to check the architecture of.'
@@ -212,20 +232,13 @@ module Homebrew
     end
     no_archs = false
     requested.each do |keg|
-      sig = nil
-      possibles = Dir["#{keg}/lib/*"] + Dir["#{keg}/bin/*"].select { |f| File.executable?(f) }
-      mo_file = possibles.reject { |f|
-          (File.symlink?(f) or File.directory?(f))
-        }.map { |m|
-          Pathname.new(m)
-        }.detect { |pn|
-          sig = pn.mach_o_signature?
-        }
+      mo_file = scour(keg.to_s).first
+      sig = mo_file.mach_o_signature?
       if sig
         case sig
-        when :FAT_CIGAM, :MH_CIGAM, :MH_CIGAM_64, :MH_FLE
+        when :FAT_CIGAM, :MH_CIGAM, :MH_CIGAM_64, :FLE_H
           odie 'Your install of Ruby is horked!  It decoded a big-endian value as little-endian.'
-        when :MH_ELF
+        when :ELF_H
           opoo "Something's not right.  #{sgr 37}#{mo_file}#{sgr 39} is a Mach-O file, but it's in ELF format."
           next
         when :FAT_MAGIC
