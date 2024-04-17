@@ -6,7 +6,7 @@ class Libpsl < Formula
 
   depends_on 'libidn2'
   depends_on 'libunistring'
-  depends_on :python
+  depends_on :python => :build
 
   def install
     args = %W[
