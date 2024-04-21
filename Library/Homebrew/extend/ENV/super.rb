@@ -230,11 +230,7 @@ module Superenv
     #   ""
     # ...that "elsewhere" appears to not yet exist, so, optimize here:
     else
-      native_CPU = Hardware::CPU.family
-      # -arch flags, when not being filtered out, belong in ENV['HOMEBREW_ARCHFLAGS']; things can
-      # get messed up if they also appear in ENV['HOMEBREW_OPTFLAGS'], so prevent that:
-      native_CPU = :g5 if arch_flags_permitted? and native_CPU == :g5_64
-      Hardware::CPU.optimization_flags.fetch(native_CPU)
+      Hardware::CPU.optimization_flags.fetch(Hardware::CPU.family)
     end
   end
 
@@ -275,6 +271,7 @@ module Superenv
   def universal_binary
     permit_arch_flags
     self["HOMEBREW_ARCHFLAGS"] = Hardware::CPU.universal_archs.as_arch_flags
+    remove 'HOMEBREW_OPTFLAGS', '-arch ppc64' if Hardware::CPU.family = :g5_64
 
     # GCC doesn't accept "-march" for a 32-bit CPU with "-arch x86_64"
     if compiler != :clang && Hardware.is_32_bit?

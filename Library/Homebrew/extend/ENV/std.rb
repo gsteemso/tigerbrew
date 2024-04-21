@@ -290,6 +290,8 @@ module Stdenv
   end
 
   def universal_binary
+    # those formulae which need to do this stuff "by hand", one iteration at a time, must remember
+    # to also handle the "-arch ppc64" optimization flag inherited from the cpu family :g5_64
     append_to_cflags Hardware::CPU.universal_archs.as_arch_flags
     append "LDFLAGS", Hardware::CPU.universal_archs.as_arch_flags
 
@@ -363,11 +365,6 @@ module Stdenv
       # -march=<cpu family> to do the right thing because we might be running
       # in a VM or on a Hackintosh.
       Hardware.oldest_cpu
-    elsif Hardware::CPU.family == :g5_64
-      # distinguishing :g5 from :g5_64 is only helpful for bottles; for anything else, having an
-      # extra “-arch” in the compiler flags can really smurf things up.  For example, the actions
-      # of some packages’ Makefiles can trigger surprise generation of fat binaries!
-      :g5
     else
       Hardware::CPU.family
     end
