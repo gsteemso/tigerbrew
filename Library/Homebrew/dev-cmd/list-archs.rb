@@ -226,23 +226,18 @@ module Homebrew
     end # scour
 
     requested = ARGV.kegs
-    if requested.empty?
-      onoe 'Only installed formulae have anything to check the architecture of.'
-      return 0
-    end
-    no_archs = false
+    raise KegUnspecifiedError if requested.empty?
+    no_archs_msg = false
     requested.each do |keg|
       mo_file = scour(keg.to_s).first
-      sig = mo_file.mach_o_signature?
+      sig = mo_file.mach_o_signature? if mo_file
       if sig
         case sig
-        when :FAT_CIGAM, :MH_CIGAM, :MH_CIGAM_64, :FLE_H
-          odie 'Your install of Ruby is horked!  It decoded a big-endian value as little-endian.'
-        when :ELF_H
-          opoo "Something's not right.  #{sgr 37}#{mo_file}#{sgr 39} is a Mach-O file, but it's in ELF format."
+        when :ELF_H, :FLE_H
+          opoo "Surprisingly, #{sgr 37}#{mo_file}#{sgr 39} is in not Mach-O but rather ELF format, and not executable by this OS."
           next
-        when :FAT_MAGIC
-          count = mo_file.b_read(4,4).unpack('N')[0]
+        when :FAT_MAGIC, :FAT_CIGAM
+          count = mo_file.b_read(4,4).unpack('N').first
           if count == 0
             opoo "#{sgr 97}#{keg.name}#{sgr 39}:  Something's not right.  #{sgr 37}#{mo_file}#{sgr 39} is a fat binary but there appear to be no binaries in it."
           elsif count == 1
@@ -251,8 +246,8 @@ module Homebrew
             parts = []
             0.upto(count - 1) do |i|
               parts << {
-                :type => mo_file.b_read(8 + 20*i, 4).unpack('H8')[0],
-                :subtype => mo_file.b_read(12 + 20*i, 4).unpack('H8')[0]
+                :type => mo_file.b_read(8 + 20*i, 4).unpack('H8').first,
+                :subtype => mo_file.b_read(12 + 20*i, 4).unpack('H8').first
               }
             end # do
             report = []
@@ -272,10 +267,10 @@ module Homebrew
               ohey report, sgr(1), foreign_parts.join("\n"), sgr(0)
             end # if-else foreign_parts
           end # if-elsif-else count
-        else # case sig
+        else # :MH_MAGIC, :MH_MAGIC_64, :MH_CIGAM, :MH_CIGAM_64
           cpu = {
-            :type => mo_file.b_read(4, 4).unpack('H8')[0],
-            :subtype => mo_file.b_read(8, 4).unpack('H8')[0]
+            :type => mo_file.b_read(4, 4).unpack('H8').first,
+            :subtype => mo_file.b_read(8, 4).unpack('H8').first
           }
           if arch = cpu_valid(cpu[:type], cpu[:subtype])
             oho "#{sgr 97}#{keg.name}#{sgr 39} is built for one architecture:  #{sgr 97}#{arch}#{sgr 39}."
@@ -285,11 +280,11 @@ module Homebrew
           end # if-else arch
         end # case sig
       else # if sig
-        oho "#{sgr 97}#{keg.name}#{sgr 39}:  #{sgr 33}No valid Mach-O architectures found."
-        no_archs = true
+        oho "#{sgr 97}#{keg.name}#{sgr 39} appears to contain #{sgr 33}no valid Mach-O architectures#{sgr 39}."
+        no_archs_msg = true
       end # if sig
     end # do |keg|
-    if no_archs
+    if no_archs_msg
       puts <<-_.undent
         Sometimes a successful brew produces no Mach-O files.  This can happen if, for
         example, the formula responsible installs only header or documentation files.
