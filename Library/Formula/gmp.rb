@@ -38,7 +38,7 @@ class Gmp < Formula
     end # cpu_lookup
 
     build_cpu = Hardware::CPU.family
-    tuple_trailer = "apple-darwin#{`uname -r`}"
+    tuple_trailer = "apple-darwin#{`uname -r`.to_i}"
 
     ENV.cxx11 if build.cxx11?
 
@@ -55,32 +55,29 @@ class Gmp < Formula
 
     archs.each do |arch|
       ENV.append_to_cflags "-arch #{arch}"
+      if arch == :ppc64
+        ENV.append_to_cflags '-force_cpusubtype_ALL'
+      else
+        ENV.remove_from_cflags '-arch ppc64'
+      end
+
       if build.universal?
         dir = "stash-#{arch}"
         mkdir dir
         dirs << dir
       end
 
-      host_sym = (build.bottle? ? (ARGV.bottle_arch or Hardware.oldest_cpu) : build_cpu)
-
       args = %W[
         --prefix=#{prefix}
         --enable-cxx
-        --host=#{cpu_lookup(host_sym)}-#{tuple_trailer}
       ]
+
+      host_sym = (build.bottle? ? (ARGV.bottle_arch or Hardware.oldest_cpu) : build_cpu)
       args << "--build=#{cpu_lookup(build_cpu)}-#{tuple_trailer}" if host_sym != build_cpu
 
       args << (ARGV.verbose? ? '--disable-silent-rules' : '--enable-silent-rules')
 
-      case arch
-        when :i386, :ppc
-          args << '--disable-assembly'
-        when :ppc64
-          ENV.append_to_cflags '-force_cpusubtype_ALL'
-          ENV.m64
-        when :x86_64
-          ENV.m64
-      end
+      args << '--disable-assembly' if Hardware.is_32_bit?
 
       system './configure', *args
       system 'make'
@@ -98,13 +95,6 @@ class Gmp < Formula
         # undo architecture-specific tweaks before next run
         ENV.remove_from_cflags "-arch #{arch}"
         ENV.remove_from_cflags '-force_cpusubtype_ALL' if arch == :ppc64
-        ENV.un_m64  # this is an extend/ENV/* addition – to do it by hand is messy, as seen here:
-#        if superenv?
-#          remove "HOMEBREW_ARCHFLAGS", "-m64"
-#        else
-#          remove_from_cflags "-m64"
-#          remove "LDFLAGS", "-arch #{Hardware::CPU.arch_64_bit}"
-#        end
       end # universal?
     end # archs.each
 
