@@ -14,7 +14,11 @@ begin
   error_pipe = UNIXSocket.open(ENV["HOMEBREW_ERROR_PIPE"], &:recv_io)
   error_pipe.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
 
-  ENV.extend(Stdenv)
+  if superenv?
+    ENV.extend(Superenv)
+  else
+    ENV.extend(Stdenv)
+  end
   ENV.setup_build_environment
 
   trap("INT", old_trap)
