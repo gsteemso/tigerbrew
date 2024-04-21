@@ -230,11 +230,11 @@ module Superenv
     #   ""
     # ...that "elsewhere" appears to not yet exist, so, optimize here:
     else
-      target_CPU = Hardware::CPU.family
-      # when building --universal, you get both -arch flags for free; having an extra one can
-      # really ruin your day, so avoid it
-      target_CPU = :g5 if ARGV.build_universal? and target_CPU = :g5_64
-      Hardware::CPU.optimization_flags.fetch(target_CPU)
+      native_CPU = Hardware::CPU.family
+      # -arch flags, when not being filtered out, belong in ENV['HOMEBREW_ARCHFLAGS']; things can
+      # get messed up if they also appear in ENV['HOMEBREW_OPTFLAGS'], so prevent that:
+      native_CPU = :g5 if arch_flags_permitted? and native_CPU == :g5_64
+      Hardware::CPU.optimization_flags.fetch(native_CPU)
     end
   end
 
@@ -286,15 +286,30 @@ module Superenv
   end
 
   def permit_arch_flags
-    append "HOMEBREW_CCCFG", "K"
+    append "HOMEBREW_CCCFG", "K" unless arch_flags_permitted?
+  end
+
+  # @private
+  def arch_flags_permitted?
+    self['HOMEBREW_CCCFG'] =~ /K/
   end
 
   def m32
+    permit_arch_flags
     append "HOMEBREW_ARCHFLAGS", "-m32"
   end
 
+  def un_m32
+    remove "HOMEBREW_ARCHFLAGS", "-m32"
+  end
+
   def m64
+    permit_arch_flags
     append "HOMEBREW_ARCHFLAGS", "-m64"
+  end
+
+  def un_m64
+    remove "HOMEBREW_ARCHFLAGS", "-m64"
   end
 
   def cxx11

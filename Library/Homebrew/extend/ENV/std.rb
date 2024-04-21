@@ -231,7 +231,7 @@ module Stdenv
     if MacOS::CLT.installed?
       append "CPPFLAGS", "-I/usr/include/libxml2"
     else
-      # Use the includes form the sdk
+      # Use the includes from the sdk
       append "CPPFLAGS", "-I#{MacOS.sdk_path}/usr/include/libxml2"
     end
   end
@@ -274,9 +274,19 @@ module Stdenv
     append "LDFLAGS", "-arch #{Hardware::CPU.arch_64_bit}"
   end
 
+  def un_m64
+    remove_from_cflags "-m64"
+    remove "LDFLAGS", "-arch #{Hardware::CPU.arch_64_bit}"
+  end
+
   def m32
     append_to_cflags "-m32"
     append "LDFLAGS", "-arch #{Hardware::CPU.arch_32_bit}"
+  end
+
+  def un_m32
+    remove_from_cflags "-m32"
+    remove "LDFLAGS", "-arch #{Hardware::CPU.arch_32_bit}"
   end
 
   def universal_binary
