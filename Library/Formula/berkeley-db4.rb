@@ -16,55 +16,7 @@ class BerkeleyDb4 < Formula
   # Fix build under Xcode 4.6
   patch :DATA
 
-  # `class_exec` doesn't exist in Tiger/Leopard stock Ruby.  Ideally, find a workaround
-  Pathname.class_exec {
-    # binread does not exist in Leopard stock Ruby 1.8.6, and Tigerbrew's
-    # cobbled-in version doesn't work, so use this instead
-    def b_read(offset = 0, length = self.size)
-      self.open('rb') do |f|
-        f.pos = offset
-        f.read(length)
-      end
-    end
-
-    def is_bare_mach_o?
-      # MH_MAGIC    = 'feedface'
-      # MH_MAGIC_64 = 'feedfacf' -- same value with lowest-order bit inverted
-      self.file? and
-      self.size >= 4 and
-      [self.b_read(0,4).unpack('N').first & 0xfffffffe].pack('N').unpack('H8').first == 'feedface'
-    end
-  }
-
   def install
-    def scour_keg(stash, sub_path)
-      s_p = (sub_path == '' ? '' : sub_path + '/')
-      Dir["#{prefix}/#{s_p}*"].each do |f|
-        pn = Pathname(f)
-        spb = s_p + pn.basename
-        if pn.directory?
-          mkdir "#{stash}/#{spb}"
-          scour_keg(stash, spb)
-        elsif ((not pn.symlink?) and pn.is_bare_mach_o?)
-          cp pn, "#{stash}/#{spb}"
-        end
-      end
-    end
-
-    def merge_mach_o_stashes(arch_dirs, sub_path)
-      s_p = (sub_path == '' ? '' : sub_path + '/')
-      Dir["#{arch_dirs.first}/#{s_p}*"].each do |f|
-        pn = Pathname(f)
-        spb = s_p + pn.basename
-        if pn.directory?
-          merge_mach_o_stashes(arch_dirs, spb)
-        else
-          system 'lipo', '-create', *Dir["{#{arch_dirs.join(',')}}/#{spb}"],
-                         '-output', prefix/spb
-        end
-      end
-    end
-
     # BerkeleyDB dislikes parallel builds
     ENV.deparallelize
 
@@ -99,15 +51,76 @@ class BerkeleyDb4 < Formula
         system "make", "install"
         if build.universal?
           system 'make', 'clean'
+          Merge.scour_keg(prefix, "../#{dir}", '')
           # undo architecture-specific tweak before next run
           ENV.remove_from_cflags "-arch #{arch}"
-          scour_keg("../#{dir}", '')
         end # if build.universal?
-      end # cd build_unix do
-    end # archs.each do
-    merge_mach_o_stashes(dirs, '') if build.universal?
-  end # def install
+      end # cd build_unix
+    end # archs.each
+    Merge.mach_o(prefix, dirs, '') if build.universal?
+  end # install
 end
+
+class Merge
+  # `class_exec` doesn't exist in Tiger/Leopard stock Ruby.  Ideally, find a workaround.
+  Pathname.class_exec {
+    # binread does not exist in Leopard stock Ruby 1.8.6, and Tigerbrew's
+    # cobbled-in version doesn't work, so use this instead
+    def b_read(offset = 0, length = self.size)
+      self.open('rb') do |f|
+        f.pos = offset
+        f.read(length)
+      end
+    end unless method_defined?(:b_read)
+
+    def is_bare_mach_o?
+      # MH_MAGIC    = 'feedface'
+      # MH_MAGIC_64 = 'feedfacf' -- same value with lowest-order bit inverted
+      self.file? and
+      self.size >= 4 and
+      [self.b_read(0,4).unpack('N').first & 0xfffffffe].pack('N').unpack('H8').first == 'feedface'
+    end unless method_defined?(:is_bare_mach_o?)
+  }
+
+  class << self
+    include FileUtils
+
+    def scour_keg(keg_prefix, stash, sub_path)
+      s_p = (sub_path == '' ? '' : sub_path + '/')
+      Dir["#{keg_prefix}/#{s_p}*"].each do |f|
+        pn = Pathname(f)
+        spb = s_p + pn.basename
+        if pn.directory?
+          Dir.mkdir "#{stash}/#{spb}"
+          scour_keg(keg_prefix, stash, spb)
+        elsif ((not pn.symlink?) and pn.is_bare_mach_o?)
+          cp pn, "#{stash}/#{spb}"
+        end
+      end
+    end # scour_keg
+
+    def mach_o(install_prefix, arch_dirs, sub_path)
+      s_p = (sub_path == '' ? '' : sub_path + '/')
+      Dir["#{arch_dirs.first}/#{s_p}*"].each do |f|
+        pn = Pathname(f)
+        spb = s_p + pn.basename
+        if pn.directory?
+          mach_o(install_prefix, arch_dirs, spb)
+        else
+          arch_files = Dir["{#{arch_dirs.join(',')}}/#{spb}"]
+          if arch_files.length > 1
+            system 'lipo', '-create', *arch_files, '-output', install_prefix/spb
+          else
+            # presumably there's a reason this only exists for one architecture, so no error;
+            # the same rationale would apply if it only existed in, say, two out of three
+            cp arch_files.first, "#{install_prefix}/#{spb}"
+          end # if > 1 file?
+        end # if directory?
+      end # Dir[stashed files].each
+    end # mach_o
+
+  end # Merge << self
+end # Merge
 
 __END__
 diff --git a/dbinc/atomic.h b/dbinc/atomic.h
