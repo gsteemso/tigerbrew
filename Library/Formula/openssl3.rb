@@ -21,13 +21,15 @@ class Openssl3 < Formula
         f.pos = offset
         f.read(length)
       end
-    end
+    end unless method_defined?(:b_read)
 
     def is_bare_mach_o?
       # MH_MAGIC    = 'feedface'
       # MH_MAGIC_64 = 'feedfacf' -- same value with lowest-order bit inverted
+      self.file? and
+      self.size >= 4 and
       [self.b_read(0,4).unpack('N').first & 0xfffffffe].pack('N').unpack('H8').first == 'feedface'
-    end
+    end unless method_defined?(:is_bare_mach_o?)
   }
 
   def arg_format(arch)
@@ -40,34 +42,6 @@ class Openssl3 < Formula
   end
 
   def install
-    def scour_keg(stash, sub_path)
-      s_p = (sub_path == '' ? '' : sub_path + '/')
-      Dir["#{prefix}/#{s_p}*"].each do |f|
-        pn = Pathname(f)
-        spb = s_p + pn.basename
-        if pn.directory?
-          mkdir "#{stash}/#{spb}"
-          scour_keg(stash, spb)
-        elsif ((not pn.symlink?) and pn.file? and pn.is_bare_mach_o?)
-          cp pn, "#{stash}/#{spb}"
-        end
-      end
-    end
-
-    def merge_mach_o_stashes(arch_dirs, sub_path)
-      s_p = (sub_path == '' ? '' : sub_path + '/')
-      Dir["#{arch_dirs.first}/#{s_p}*"].each do |f|
-        pn = Pathname(f)
-        spb = s_p + pn.basename
-        if pn.directory?
-          merge_mach_o_stashes(arch_dirs, spb)
-        else
-          system 'lipo', '-create', *Dir["{#{arch_dirs.join(',')}}/#{spb}"],
-                         '-output', prefix/spb
-        end
-      end
-    end
-
     # Build breaks passing -w
     ENV.enable_warnings if ENV.compiler == :gcc_4_0
     # Leopard and newer have the crypto framework
@@ -82,6 +56,7 @@ class Openssl3 < Formula
     if build.universal?
       ENV.permit_arch_flags
       archs = Hardware::CPU.universal_archs
+      dirs = []
     elsif MacOS.prefer_64_bit?
       archs = [Hardware::CPU.arch_64_bit]
     else
@@ -90,14 +65,12 @@ class Openssl3 < Formula
 
     openssldir.mkpath
 
-    dirs = []
-
     archs.each do |arch|
       if build.universal?
         ENV.append_to_cflags "-arch #{arch}"
-        dir = "build-#{arch}"
-        dirs << dir
+        dir = "stash-#{arch}"
         mkdir dir
+        dirs << dir
       end
 
       args = [
@@ -118,14 +91,14 @@ class Openssl3 < Formula
       end
 
       if build.universal?
+        system 'make', 'clean'
+        Merge.scour_keg(prefix, dir, '')
         # undo architecture-specific tweak before next run
         ENV.remove_from_cflags "-arch #{arch}"
-        scour_keg(dir, '')
-        system 'make', 'clean'
       end
-    end
-    merge_mach_o_stashes(dirs, '') if build.universal?
-  end
+    end # archs.each
+    Merge.mach_o(prefix, dirs, '') if build.universal?
+  end # install
 
   def openssldir
     etc/"openssl@3"
@@ -160,5 +133,41 @@ class Openssl3 < Formula
       checksum = f.read(100).split("=").last.strip
       assert_equal checksum, expected_checksum
     end
-  end
-end
+  end # test
+end # Openssl3
+
+class Merge
+  def self.scour_keg(keg_prefix, stash, sub_path)
+    s_p = (sub_path == '' ? '' : sub_path + '/')
+    Dir["#{keg_prefix}/#{s_p}*"].each do |f|
+      pn = Pathname(f)
+      spb = s_p + pn.basename
+      if pn.directory?
+        mkdir "#{stash}/#{spb}"
+        scour_keg(keg_prefix, stash, spb)
+      elsif ((not pn.symlink?) and pn.is_bare_mach_o?)
+        cp pn, "#{stash}/#{spb}"
+      end
+    end
+  end # scour_keg
+
+  def self.mach_o(install_prefix, root_dir, archs, sub_path)
+    s_p = (sub_path == '' ? '' : sub_path + '/')
+    Dir["#{root_dir}/#{archs.first}/#{s_p}*"].each do |f|
+      pn = Pathname(f)
+      spb = s_p + pn.basename
+      if pn.directory?
+        mach_o_stashes(install_prefix, root_dir, archs, spb)
+      else
+        arch_files = Dir["#{root_dir}/{#{archs.join(',')}}/#{spb}"]
+        if arch_files.length > 1
+          system 'lipo', '-create', *arch_files, '-output', install_prefix/spb
+        else
+          # presumably there's a reason this only exists for one architecture, so no error
+          # same rationale would apply if it only existed in, say, two out of three
+          cp arch_files.first, install_prefix/spb
+        end
+      end
+    end
+  end # mach_o
+end # Merge
