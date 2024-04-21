@@ -16,9 +16,9 @@ odie() {
   exit 1
 }
 
-safe_cd() {
-  cd "$@" >/dev/null || odie "Error: failed to cd to $*!"
-}
+# safe_cd() {
+#   cd "$@" >/dev/null || odie "Error: failed to cd to $*!"
+# }
 
 brew() {
   "$HOMEBREW_BREW_FILE" "$@"
@@ -30,8 +30,8 @@ then
   export LC_ALL="en_US.UTF-8"
 fi
 
-# Where we store built products; /usr/local/Cellar if it exists,
-# otherwise a Cellar relative to the Repository.
+# Where we store built products.  [prefix]/Cellar if it exists (/usr/local/Cellar,
+# by default) -- otherwise [repository]/Cellar.
 if [[ -d "$HOMEBREW_PREFIX/Cellar" ]]
 then
   HOMEBREW_CELLAR="$HOMEBREW_PREFIX/Cellar"
@@ -99,15 +99,15 @@ export HOMEBREW_REPOSITORY
 export HOMEBREW_LIBRARY
 
 # Declared in brew.sh
-export HOMEBREW_VERSION
 export HOMEBREW_CACHE
 export HOMEBREW_CELLAR
-export HOMEBREW_SYSTEM
 export HOMEBREW_CURL
 export HOMEBREW_OS_VERSION
 export HOMEBREW_OSX_VERSION
+export HOMEBREW_SYSTEM
 export HOMEBREW_USER_AGENT
 export HOMEBREW_USER_AGENT_CURL
+export HOMEBREW_VERSION
 
 if [[ -n "$HOMEBREW_OSX" ]]
 then
@@ -178,7 +178,7 @@ fi
 if [[ "$(id -u)" = "0" && "$(/usr/bin/stat -f%u "$HOMEBREW_BREW_FILE")" != "0" ]]
 then
   case "$HOMEBREW_COMMAND" in
-    install|reinstall|postinstall|link|pin|update|upgrade|vendor-install|create|migrate|tap|tap-pin|switch)
+    install|reinstall|postinstall|link|pin|unpin|update|upgrade|vendor-install|create|migrate|tap|tap-pin|switch)
       odie <<EOS
 Cowardly refusing to 'sudo brew $HOMEBREW_COMMAND'
 You can use brew with sudo, but only if the brew executable is owned by root.
@@ -197,12 +197,11 @@ if [[ -x "$HOMEBREW_LIBRARY/Homebrew/cmd/vendor-curl.sh" ]]
 then
   source "$HOMEBREW_LIBRARY/Homebrew/cmd/vendor-curl.sh"
   setup-curl-path
+  # This may have changed after we vendored curl; regenerate it
+  HOMEBREW_CURL_VERSION="$("$HOMEBREW_CURL" --version 2>/dev/null | head -n1 | /usr/bin/awk '{print $1"/"$2}')"
+  HOMEBREW_USER_AGENT_CURL="$HOMEBREW_USER_AGENT $HOMEBREW_CURL_VERSION"
+  export HOMEBREW_USER_AGENT_CURL
 fi
-
-# This may have changed after we vendored curl; regenerate it
-HOMEBREW_CURL_VERSION="$("$HOMEBREW_CURL" --version 2>/dev/null | head -n1 | /usr/bin/awk '{print $1"/"$2}')"
-HOMEBREW_USER_AGENT_CURL="$HOMEBREW_USER_AGENT $HOMEBREW_CURL_VERSION"
-export HOMEBREW_USER_AGENT_CURL
 
 if [[ -n "$HOMEBREW_BASH_COMMAND" ]]
 then

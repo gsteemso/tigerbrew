@@ -3,27 +3,25 @@
 
 std_trap = trap("INT") { exit! 130 } # no backtrace thanks
 
-HOMEBREW_BREW_FILE = ENV["HOMEBREW_BREW_FILE"]
+require "pathname"  # a Ruby library
 
-if ARGV == %w[--prefix]
-  puts File.dirname(File.dirname(HOMEBREW_BREW_FILE))
-  exit 0
-end
-
-require "pathname"
 HOMEBREW_LIBRARY_PATH = Pathname.new(__FILE__).realpath.parent.join("Homebrew")
-$:.unshift(HOMEBREW_LIBRARY_PATH.to_s)
-require "global"
+$:.unshift(HOMEBREW_LIBRARY_PATH.to_s) # adds HOMEBREW_LIBRARY_PATH to front of library search path
 
-if ARGV.first == "--version"
+require 'global'  # a Homebrew library
+
+HOMEBREW_BREW_FILE  = Pathname.new(ENV['HOMEBREW_BREW_FILE'])
+HOMEBREW_CACHE      = Pathname.new(ENV['HOMEBREW_CACHE'])
+HOMEBREW_CELLAR     = Pathname.new(ENV['HOMEBREW_CELLAR'])
+HOMEBREW_PREFIX     = Pathname.new(ENV['HOMEBREW_PREFIX'])
+HOMEBREW_REPOSITORY = Pathname.new(ENV['HOMEBREW_REPOSITORY'])
+HOMEBREW_LIBRARY    = Pathname.new(ENV['HOMEBREW_LIBRARY'])
+HOMEBREW_VERSION    = Pathname.new(ENV['HOMEBREW_VERSION'])
+
+case ARGV.first
+when '-V', '--version'
   puts Homebrew.homebrew_version_string
   exit 0
-elsif ARGV.first == "-v"
-  puts "Homebrew #{Homebrew.homebrew_version_string}"
-  # Shift the -v to the end of the parameter list
-  ARGV << ARGV.shift
-  # If no other arguments, just quit here.
-  exit 0 if ARGV.length == 1
 end
 
 # Check for bad xcode-select before anything else, because `doctor` and
@@ -31,19 +29,13 @@ end
 # Note that this bug was fixed in 10.9
 if OS.mac? && MacOS.version < :mavericks && MacOS.active_developer_dir == "/"
   odie <<-EOS.undent
-  Your xcode-select path is currently set to '/'.
-  This causes the `xcrun` tool to hang, and can render Homebrew unusable.
-  If you are using Xcode, you should:
-    sudo xcode-select -switch /Applications/Xcode.app
-  Otherwise, you should:
-    sudo rm -rf /usr/share/xcode-select
+	Your xcode-select path is currently set to '/'.
+	This causes the `xcrun` tool to hang, and can render Homebrew unusable.
+	If you are using Xcode, you should:
+	  sudo xcode-select -switch /Applications/Xcode.app
+	Otherwise, you should:
+	  sudo rm -rf /usr/share/xcode-select
   EOS
-end
-
-case HOMEBREW_PREFIX.to_s
-when "/", "/usr"
-  # it may work, but I only see pain this route and don't want to support it
-  abort "Cowardly refusing to continue at this prefix: #{HOMEBREW_PREFIX}"
 end
 
 # Many Pathname operations use getwd when they shouldn't, and then throw
@@ -78,19 +70,6 @@ begin
   end
 
   cmd = HOMEBREW_INTERNAL_COMMAND_ALIASES.fetch(cmd, cmd)
-
-  sudo_check = %w[ install link pin unpin upgrade ]
-
-  if sudo_check.include? cmd
-    if Process.uid.zero? and not File.stat(HOMEBREW_BREW_FILE).uid.zero?
-      raise <<-EOS.undent
-        Cowardly refusing to `sudo brew #{cmd}`
-        You can use brew with sudo, but only if the brew executable is owned by root.
-        However, this is both not recommended and completely unsupported so do so at
-        your own risk.
-        EOS
-    end
-  end
 
   # Add contributed commands to PATH before checking.
   Dir["#{HOMEBREW_LIBRARY}/Taps/*/*/cmd"].each do |tap_cmd_dir|
@@ -142,9 +121,7 @@ begin
   if internal_cmd
     Homebrew.send cmd.to_s.gsub("-", "_").downcase
   elsif which "brew-#{cmd}"
-    %w[CACHE CELLAR LIBRARY_PATH PREFIX REPOSITORY].each do |e|
-      ENV["HOMEBREW_#{e}"] = Object.const_get("HOMEBREW_#{e}").to_s
-    end
+    ENV['HOMEBREW_LIBRARY_PATH'] = Object.const_get('HOMEBREW_LIBRARY_PATH').to_s
     exec "brew-#{cmd}", *ARGV
   elsif (path = which("brew-#{cmd}.rb")) && require?(path)
     exit Homebrew.failed? ? 1 : 0
