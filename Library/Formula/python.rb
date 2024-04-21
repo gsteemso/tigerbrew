@@ -132,7 +132,8 @@ class Python < Formula
 
     if build.universal?
       ENV.universal_binary
-      args << "--enable-universalsdk=/" << "--with-universal-archs=intel"
+      ENV['HOMEBREW_OPTFLAGS'] = '-force_cpusubtype_ALL'
+      args << "--enable-universalsdk=/" << "--with-universal-archs=all"
     end
 
     if build.with? "sqlite"
@@ -332,13 +333,6 @@ class Python < Formula
   end
 
   def caveats; <<~EOS
-    By design, it is not possible to do a PowerPC-only universal build of
-    Python 2.7.  Multi-platform builds that enable either or both of 32-bit
-    and 64-bit execution on both PowerPC and Intel Macs are supported by
-    the Python source-code package, but cannot be built by Tigerbrew.  The
-    “universal” option to this formula is therefore only provided on Intel-
-    compatible machines.
-
     Pip and setuptools have been installed. To update them
       pip install --upgrade pip setuptools
 
