@@ -10,18 +10,13 @@ class Texinfo < Formula
   end
 
   keg_only :provided_by_osx, <<-EOS.undent
-    Software that uses TeX, such as lilypond and octave, require a newer version
+    Software that uses TeX, such as lilypond and octave, requires a newer version
     of these files.
   EOS
 
-  depends_on "gettext" # Need libintl.h
   depends_on "perl"
 
   def install
-    # The perl modules have their own configure scripts and the path to libintl.h
-    # is not propagated down and so the build breaks, despite specifying --with-libintl-prefix
-    ENV["PERL_EXT_CFLAGS"] = "#{Formula["gettext"].opt_prefix}/include"
-    ENV["PERL_EXT_LDFLAGS"] = "#{Formula["gettext"].opt_prefix}/lib"
     system "./configure", "--disable-dependency-tracking",
                           "--disable-install-warnings",
                           "--prefix=#{prefix}"
