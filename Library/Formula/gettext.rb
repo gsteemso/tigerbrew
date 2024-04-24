@@ -14,7 +14,7 @@ class Gettext < Formula
   option :universal
   # former option to leave out the examples is no longer available in `configure`
 
-  # Fix lang-python-* failures when a traditional French locale
+  # Fix lang-python-* failures when in a traditional French locale
   # https://git.savannah.gnu.org/gitweb/?p=gettext.git;a=patch;h=3c7e67be7d4dab9df362ab19f4f5fa3b9ca0836b
   # Skip the gnulib tests as they have their own set of problems which has nothing to do with what's being built.
   patch :p0, :DATA
