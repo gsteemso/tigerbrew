@@ -225,9 +225,12 @@ module Superenv
       Hardware::CPU.optimization_flags.fetch(Hardware.oldest_cpu)
     elsif compiler == :clang
       "-march=native"
-    # This is mutated elsewhere, so return an empty string in this case
+    # # This is mutated elsewhere, so return an empty string in this case
+    # else
+    #   ""
+    # ...that "elsewhere" appears to not yet exist, so, optimize here:
     else
-      ""
+      Hardware::CPU.optimization_flags.fetch(Hardware::CPU.family)
     end
   end
 
@@ -242,11 +245,12 @@ module Superenv
 
   public
 
-  # Removes the MAKEFLAGS environment variable, causing make to use a single job.
+  # Changes the MAKEFLAGS environment variable, causing make to use a single job.
   # This is useful for makefiles with race conditions.
-  # When passed a block, MAKEFLAGS is removed only for the duration of the block and is restored after its completion.
+  # When passed a block, MAKEFLAGS is altered only for the duration of the block and is restored after its completion.
   def deparallelize
-    old = delete("MAKEFLAGS")
+    old = self["MAKEFLAGS"]
+    self["MAKEFLAGS"] = self["MAKEFLAGS"].sub(/(-\w*j)\d+/, "\\11")
     if block_given?
       begin
         yield
@@ -265,7 +269,10 @@ module Superenv
   end
 
   def universal_binary
+    permit_arch_flags
     self["HOMEBREW_ARCHFLAGS"] = Hardware::CPU.universal_archs.as_arch_flags
+    # avoid confusing matters by multiplying where the -arch flags are found:
+    remove 'HOMEBREW_OPTFLAGS', '-arch ppc64' if Hardware::CPU.family = :g5_64
 
     # GCC doesn't accept "-march" for a 32-bit CPU with "-arch x86_64"
     if compiler != :clang && Hardware.is_32_bit?
@@ -277,15 +284,30 @@ module Superenv
   end
 
   def permit_arch_flags
-    append "HOMEBREW_CCCFG", "K"
+    append "HOMEBREW_CCCFG", "K" unless arch_flags_permitted?
+  end
+
+  # @private
+  def arch_flags_permitted?
+    self['HOMEBREW_CCCFG'] =~ /K/
   end
 
   def m32
+    permit_arch_flags
     append "HOMEBREW_ARCHFLAGS", "-m32"
   end
 
+  def un_m32
+    remove "HOMEBREW_ARCHFLAGS", "-m32"
+  end
+
   def m64
+    permit_arch_flags
     append "HOMEBREW_ARCHFLAGS", "-m64"
+  end
+
+  def un_m64
+    remove "HOMEBREW_ARCHFLAGS", "-m64"
   end
 
   def cxx11
@@ -293,7 +315,7 @@ module Superenv
     when "clang"
       append "HOMEBREW_CCCFG", "x", ""
       append "HOMEBREW_CCCFG", "g", ""
-    when /gcc-(4\.(8|9)|5)/
+    when GNU_GXX11_REGEXP
       append "HOMEBREW_CCCFG", "x", ""
     else
       raise "The selected compiler doesn't support C++11: #{homebrew_cc}"

@@ -231,7 +231,7 @@ module Stdenv
     if MacOS::CLT.installed?
       append "CPPFLAGS", "-I/usr/include/libxml2"
     else
-      # Use the includes form the sdk
+      # Use the includes from the sdk
       append "CPPFLAGS", "-I#{MacOS.sdk_path}/usr/include/libxml2"
     end
   end
@@ -274,12 +274,24 @@ module Stdenv
     append "LDFLAGS", "-arch #{Hardware::CPU.arch_64_bit}"
   end
 
+  def un_m64
+    remove_from_cflags "-m64"
+    remove "LDFLAGS", "-arch #{Hardware::CPU.arch_64_bit}"
+  end
+
   def m32
     append_to_cflags "-m32"
     append "LDFLAGS", "-arch #{Hardware::CPU.arch_32_bit}"
   end
 
+  def un_m32
+    remove_from_cflags "-m32"
+    remove "LDFLAGS", "-arch #{Hardware::CPU.arch_32_bit}"
+  end
+
   def universal_binary
+    # those formulae which need to do this stuff "by hand", one iteration at a time, must remember
+    # to also handle the "-arch ppc64" optimization flag inherited from the cpu family :g5_64
     append_to_cflags Hardware::CPU.universal_archs.as_arch_flags
     append "LDFLAGS", Hardware::CPU.universal_archs.as_arch_flags
 
@@ -293,7 +305,7 @@ module Stdenv
     if compiler == :clang
       append "CXX", "-std=c++11"
       append "CXX", "-stdlib=libc++"
-    elsif compiler =~ /gcc-(4\.(8|9)|5)/
+    elsif compiler =~ GNU_GXX11_REGEXP
       append "CXX", "-std=c++11"
     else
       raise "The selected compiler doesn't support C++11: #{compiler}"
