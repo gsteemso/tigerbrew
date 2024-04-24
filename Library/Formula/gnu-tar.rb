@@ -10,9 +10,16 @@ class GnuTar < Formula
   end
 
   option "with-default-names", "Do not prepend 'g' to the binary"
+  option "with-libiconv", "Build with text encoding support"
+  depends_on "libiconv" => :optional
 
   def install
-    args = ["--prefix=#{prefix}", "--mandir=#{man}"]
+    args = %W[
+      --prefix=#{prefix}
+      --disable-dependency-tracking
+      --mandir=#{man}
+    ]
+    args << "--with-libiconv-prefix=#{Formula["libiconv"].opt_prefix}" if build.with? "libiconv"
     args << "--program-prefix=g" if build.without? "default-names"
 
     system "./configure", *args
