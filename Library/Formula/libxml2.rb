@@ -1,8 +1,8 @@
 class Libxml2 < Formula
   desc "GNOME XML library"
   homepage "http://xmlsoft.org"
-  url "https://download.gnome.org/sources/libxml2/2.11/libxml2-2.11.4.tar.xz"
-  sha256 "737e1d7f8ab3f139729ca13a2494fd17bf30ddb4b7a427cf336252cab57f57f7"
+  url "https://download.gnome.org/sources/libxml2/2.11/libxml2-2.11.6.tar.xz"
+  sha256 "c90eee7506764abbe07bb616b82da452529609815aefef423d66ef080eb0c300"
 
   head do
     url "https://git.gnome.org/browse/libxml2", :using => :git
@@ -12,40 +12,59 @@ class Libxml2 < Formula
     depends_on "libtool" => :build
   end
 
-  bottle do
-    sha256 "a25624dea30d2c40b920ecaf6314801cd04350dbf2daa072211f7cf602dac040" => :tiger_altivec
-  end
+  option :universal
 
+  depends_on 'icu4c' => :recommended
   depends_on "python" => :optional
+  depends_on "python3" if build.with? "python"
   depends_on "xz"
   depends_on "zlib"
 
   keg_only :provided_by_osx
 
-  option :universal
-
   def install
+    ENV.deparallelize
     ENV.universal_binary if build.universal?
     if build.head?
       inreplace "autogen.sh", "libtoolize", "glibtoolize"
       system "./autogen.sh"
     end
 
-    system "./configure", "--disable-dependency-tracking",
-                          "--prefix=#{prefix}",
-                          "--without-python",
-                          "--with-lzma=#{Formula["xz"].opt_prefix}",
-                          "--with-zlib=#{Formula["zlib"].opt_prefix}"
+    args = %W[
+      --prefix=#{prefix}
+      --disable-dependency-tracking
+      --with-ftp
+      --with-lzma=#{Formula["xz"].opt_prefix}
+      --with-zlib=#{Formula["zlib"].opt_prefix}
+    ]
+    args << "--with-icu=#{Formula["icu4c"].opt_prefix}" if build.with? 'icu4c'
+    # the package builds the python bindings by default
+    args << "--without-python" if build.without? "python"
+
+    system "./configure", *args
     system "make"
-    ENV.deparallelize
+    system "make", "check"
     system "make", "install"
 
     if build.with? "python"
       cd "python" do
         # We need to insert our include dir first
         inreplace "setup.py", "includes_dir = [", "includes_dir = ['#{include}', '#{MacOS.sdk_path}/usr/include',"
-        system "python", "setup.py", "install", "--prefix=#{prefix}"
+        system "python3", "setup.py", "install", "--prefix=#{prefix}"
       end
+    end
+  end
+
+  def caveats
+    if build.with? "python"
+      <<-EOS.undent
+        The Python installer warns loudly of a failed test.  While the warning is,
+        technically, correct, it is misleading – this is a keg-only brew and your
+        Python is not _supposed_ to be able to see it without help.
+
+        Put briefly:  Ignore the huge, strident failure message -- the installation
+        is, in fact, successful.
+      EOS
     end
   end
 
