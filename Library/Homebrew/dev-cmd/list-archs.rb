@@ -50,7 +50,7 @@ PPC_SUBTYPES = {
 def cpu_valid(type, subtype)
   case CPU_TYPES[type]
   when :i386, :x86_64
-    type
+    CPU_TYPES[type]
   when :PPC
     temp = PPC_SUBTYPES[subtype]
     if temp == :ppc_all
