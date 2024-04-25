@@ -5,16 +5,16 @@ class Openssl < Formula
   mirror "https://www.mirrorservice.org/sites/ftp.openssl.org/source/openssl-1.1.1w.tar.gz"
   sha256 "cf3098950cb4d853ad95c0841f1f9c6d3dc102dccfcacd521d93925208b76ac8"
 
+  bottle do
+    sha256 "7fa8eeb679ec9e180c5296515c1402207c653b6fd22be981b1c67e81f3fc0c4b" => :tiger_altivec
+  end
+
   option :universal
   option "without-test", "Skip build-time tests (not recommended)"
 
   # Need a minimum of Perl 5.10 for Configure script and Test::More 0.96 for testsuite
   depends_on "perl" => :build
   depends_on "curl-ca-bundle"
-
-  bottle do
-    sha256 "7fa8eeb679ec9e180c5296515c1402207c653b6fd22be981b1c67e81f3fc0c4b" => :tiger_altivec
-  end
 
   def arch_args
     {
@@ -75,18 +75,20 @@ class Openssl < Formula
         dirs << dir
         mkdir dir
         mkdir "#{dir}/engines"
-        system "make", "clean"
       end
 
       ENV.deparallelize
       system "perl", "./Configure", *(configure_args + arch_args[arch])
+
+      system "make", "clean" if build.universal?
+
       system "make", "depend"
       system "make"
       system "make", "test" if build.with?("test")
 
       if build.universal?
         cp "include/openssl/opensslconf.h", dir
-        cp Dir["*.?.?.?.dylib"] + Dir["*.a"] + "apps/openssl", dir
+        cp Dir["*.dylib"] + Dir["*.a"] + ["apps/openssl"], dir
         cp Dir["engines/**/*.dylib"], "#{dir}/engines"
       end
     end
@@ -103,6 +105,7 @@ class Openssl < Formula
                        "-output", "#{lib}/#{libname}.a"
       end
 
+      mkdir lib/"engines"
       Dir.glob("#{dirs.first}/engines/*.dylib") do |engine|
         libname = File.basename(engine)
         system "lipo", "-create", "#{dirs.first}/engines/#{libname}",
