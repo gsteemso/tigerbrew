@@ -41,17 +41,17 @@ class Icu4c < Formula
 
   def post_install
     # The generated dylibs unpredictably refer to some or all of their required libraries using the
-    # "@loader_path" syntax, which ld refuses to recognize even though it wrote them that way.  Not
-    # even Tigerbrew’s newer ld64 works.  Work around this by editing any such link names:
+    # "@loader_path" syntax, which ld cannot understand.  Not even Tigerbrew’s newer ld64 works.
+    # Work around this by editing any such link names:
     oh1 'verifying that dynamic libraries are linked correctly'
-    Dir["#{opt_lib}/*.#{version}.dylib"].each do |l|
+    Dir["#{lib}/*.#{version}.dylib"].each do |l|
       FileUtils::chmod 'a+w', l
       `#{OS::Mac.otool.to_s} -L #{l}`.lines.select { |s|
         s =~ /\@loader_path/
       }.map { |s|
         s.match(/\@loader_path\S+/)
       }.each do |n|
-        system OS::Mac.install_name_tool.to_s, '-change', n, n.to_s.sub('@loader_path', opt_lib), l
+        system OS::Mac.install_name_tool.to_s, '-change', n, n.to_s.sub('@loader_path', lib), l
       end
       FileUtils::chmod 'a-w', l
     end
