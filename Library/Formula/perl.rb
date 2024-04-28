@@ -17,6 +17,7 @@ class Perl < Formula
   end
 
   def install
+    ENV.m32
     args = [
       "-des",
       "-Dprefix=#{prefix}",
