@@ -31,4 +31,8 @@ class LibunwindHeaders < Formula
     (include/"libunwind").install Dir["src/*.h*"]
     (include/"libunwind/libunwind_priv.h").unlink
   end
+
+  test do
+    true
+  end
 end

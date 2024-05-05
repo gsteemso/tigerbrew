@@ -13,4 +13,8 @@ class CurlCaBundle < Formula
   def install
     share.install "cacert-#{version}.pem" => "ca-bundle.crt"
   end
+
+  test do
+    true
+  end
 end

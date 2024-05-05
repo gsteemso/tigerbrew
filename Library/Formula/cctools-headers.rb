@@ -22,4 +22,8 @@ class CctoolsHeaders < Formula
     # ld64 requires an updated mach/machine.h to build
     resource("headers").stage { (include/"mach").install "osfmk/mach/machine.h" }
   end
+
+  test do
+    true
+  end
 end

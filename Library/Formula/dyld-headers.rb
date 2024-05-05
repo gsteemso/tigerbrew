@@ -12,6 +12,10 @@ class DyldHeaders < Formula
   def install
     include.install Dir["include/*"]
   end
+
+  test do
+    true
+  end
 end
 
 __END__
