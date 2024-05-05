@@ -9,14 +9,15 @@ class Perl < Formula
   keg_only :provided_by_osx,
     "OS X ships Perl and overriding that can cause unintended issues"
 
-  option "with-dtrace", "Build with DTrace probes" if MacOS.version >= :leopard
-  option "with-tests", "Build and run the test suite"
-
   bottle do
     sha256 "22a0e98c6e0c1356823dffdd096fb150a938992672aceb9dc916cf7834577833" => :tiger_altivec
   end
 
+  option "with-dtrace", "Build with DTrace probes" if MacOS.version >= :leopard
+  option "with-tests", "Build and run the test suite"
+
   def install
+    ENV.m32 if Hardware::CPU.ppc?
     args = [
       "-des",
       "-Dprefix=#{prefix}",
@@ -30,7 +31,6 @@ class Perl < Formula
       "-Alddlflags=#{ENV.ldflags}",
       "-Aldflags=#{ENV.ldflags}"
     ]
-
     args << "-Dusedtrace" if build.with? "dtrace"
     args << "-Dusedevel" if build.head?
 
