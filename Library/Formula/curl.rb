@@ -13,9 +13,9 @@ class Curl < Formula
 
   option "with-c-ares",   "Build with C-ARES asynchronous DNS support"
   option "with-gsasl",    "Build with SASL authentication support"
-  option "with-libressl", "Build with LibreSSL instead of Secure Transport or OpenSSL"
+  option "with-libressl", "Build with LibreSSL instead of OpenSSL"
   option "with-libssh2",  "Build with scp and sFTP support"
-  option "with-rtmpdump", "Build with RTMP support"
+  option "with-rtmpdump", "Build with RTMP (streaming Flash) support"
   option "with-zstd",     "Build with ZStandard compression support"
 
   deprecated_option "with-ares" => "with-c-ares"
@@ -29,27 +29,31 @@ class Curl < Formula
   depends_on "rtmpdump" => :optional
   depends_on "zstd"     => :optional
 
-  if (build.without?("libressl"))
-    depends_on "openssl3"
-  end
+  depends_on "libidn2"     # no point in making this optional because libPSL depends on it
+  depends_on "libnghttp2"
+  depends_on "libpsl"
+  depends_on "openssl3" if (build.without?("libressl"))
+  depends_on "zlib"
 
   depends_on "pkg-config" => :build
-  depends_on "libnghttp2"
-  depends_on "zlib"
 
   def install
     # can’t do --enable-ech yet because waiting on standards process
-    # no --enable-websockets because is experimental
+    # no --enable-websockets yet because needs package
+    # no --with-brotli yet because needs package
     # no SSPI because is a, *spit*, Windows thing
-    # TODO:  HTTP/3 -- needs one of four optional prerequisite packages
+    # TODO:
+    #   HTTP/3 -- needs NGHTTP3 package and NGTCP2
+    #   NGTCP2 -- needs package
     args = %W[
       --prefix=#{prefix}
       --disable-dependency-tracking
       --disable-debug
       --with-gssapi
+      --with-libidn2
       --with-zlib=#{Formula["zlib"].opt_prefix}
     ]
-    args << "--disable-silent-rules" if ARGV.verbose?
+    args << (build.include?('verbose') ? "--disable-silent-rules" : "--enable-silent-rules")
 
     # cURL has a new firm desire to find ssl with PKG_CONFIG_PATH instead of using
     # "--with-ssl" any more. "when possible, set the PKG_CONFIG_PATH environment
@@ -73,6 +77,8 @@ class Curl < Formula
     args << "--with-ca-bundle=#{HOMEBREW_PREFIX}/share/ca-bundle.crt"
 
     system "./configure", *args
+    system "make"
+    # no `make test` because the one that compares Curl’s errors to its docs is the only failure
     system "make", "install"
     system "make", "install", "-C", "scripts"
     libexec.install "scripts/mk-ca-bundle.pl"
