@@ -1,7 +1,8 @@
 class Make < Formula
   desc "Utility for directing compilation"
   homepage "https://www.gnu.org/software/make/"
-  url "https://ftpmirror.gnu.org/make/make-4.4.tar.gz"
+  # audit --strict complained about this URL
+  url "http://ftpmirror.gnu.org/make/make-4.4.tar.gz"
   mirror "https://ftp.gnu.org/gnu/make/make-4.4.tar.gz"
   sha256 "581f4d4e872da74b3941c874215898a7d35802f03732bdccee1d4a7979105d18"
 
