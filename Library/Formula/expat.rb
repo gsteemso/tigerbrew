@@ -17,9 +17,13 @@ class Expat < Formula
 
   def install
     ENV.universal_binary if build.universal?
-    system "./configure", "--disable-dependency-tracking",
-                          "--prefix=#{prefix}",
-                          "--mandir=#{man}"
+    args = %W[
+      --disable-dependency-tracking
+      --prefix=#{prefix}
+      --mandir=#{man}
+    ]
+    args << (build.include?('verbose') ? '--disable-silent-rules' : '--enable-silent-rules')
+    system "./configure", *args
     system "make", "install"
   end
 
@@ -58,6 +62,7 @@ class Expat < Formula
         return result;
       }
     EOS
+    ENV.universal_binary if build.universal?
     system ENV.cc, "test.c", "-lexpat", "-o", "test"
     assert_equal "tag:str|data:Hello, world!|", shell_output("./test")
   end
