@@ -15,7 +15,7 @@ class Gdbm < Formula
   option "with-libgdbm-compat", "Build libgdbm_compat, a compatibility layer which provides UNIX-like dbm and ndbm interfaces."
 
   if build.with? 'libgdbm-compat'
-    keg_only :provided_by_osx, 'libgdbm_compat installs a header that shadows a system header.'
+    keg_only :provided_by_osx, 'libgdbm_compat would install a header that shadows a system header.'
   end
 
   depends_on "readline"
@@ -25,9 +25,9 @@ class Gdbm < Formula
 
     args = %W[
       --disable-dependency-tracking
-      --disable-silent-rules
       --prefix=#{prefix}
     ]
+    args << (build.include?('verbose') ? "--disable-silent-rules" : "--enable-silent-rules")
     args << "--enable-libgdbm-compat" if build.with? "libgdbm-compat"
 
     system "./configure", *args
