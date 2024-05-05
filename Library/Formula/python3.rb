@@ -8,7 +8,7 @@ class Python3 < Formula
     sha256 "eaebc29ef8cd0b64b4032694e68c7f8b95352cc790f457c9fd5a3d4bb76f93ab" => :tiger_altivec
   end
 
-  option :universal if Hardware::CPU.intel?
+  option :universal
 
   depends_on "pkg-config" => :build
   depends_on "readline" => :recommended
@@ -102,8 +102,21 @@ class Python3 < Formula
     end
 
     if build.universal?
-      ENV.universal_binary
-      args << "--enable-universalsdk" << "--with-universal-archs=intel"
+      ENV.permit_arch_flags
+      if superenv?
+        ENV['HOMEBREW_OPTFLAGS'] = ''
+      # may need an else clause if it doesn’t build properly under stdenv
+      end
+      if Hardware::CPU.intel?
+        args << "--enable-universalsdk" << "--with-universal-archs=intel"
+        args << 'ax_cv_c_float_words_bigendian=no'
+      elsif Hardware::CPU.ppc?
+        args << "--enable-universalsdk" << "--with-universal-archs=all"
+        # with a four-architecture build, gettext won’t link correctly as it lacks x86 code
+        intl_header = HOMEBREW_PREFIX/'include/libintl.h'
+        mv(intl_header, HOMEBREW_PREFIX/'include/not_libintl.h') if intl_header.file?
+        args << 'ax_cv_c_float_words_bigendian=yes'
+      end
     end
 
     # Allow python modules to use ctypes.find_library to find homebrew's stuff
@@ -167,6 +180,11 @@ class Python3 < Formula
     # which confuses ld in earlier versions of OS X and breaks
     # relocation/bottling attempts.
     (libexec/"wheel/tests/testdata").rmtree
+
+    if build.universal? and Hardware::CPU.ppc?
+      intl_header = HOMEBREW_PREFIX/'include/not_libintl.h'
+      mv(intl_header, HOMEBREW_PREFIX/'include/libintl.h') if intl_header.file?
+    end
   end
 
   def post_install
@@ -289,24 +307,17 @@ class Python3 < Formula
       xy = version.to_s.slice(/(3\.\d\d)/) || "3.10"
     end
     text = <<~EOS
-      By design, it is not possible to do a PowerPC-only universal build of Python.
-      Multi-platform builds that enable either or both of 32-bit and 64-bit execution
-      on both PowerPC and Intel Macs, or 64-bit execution on both Intel and ARM, are
-      supported by the Python source-code package, but cannot be built by Tigerbrew.
-      The “universal” option to this formula is therefore only provided on Intel-
-      compatible machines.
-
-      Python has been installed as
+      Python is installed as
         #{HOMEBREW_PREFIX}/bin/python3
 
       Unversioned symlinks `python`, `python-config`, `pip` etc. pointing to
-      `python3`, `python3-config`, `pip3` etc., respectively, have been installed into
+      `python3`, `python3-config`, `pip3` etc., respectively, are installed into
         #{opt_libexec}/bin
 
       If you need Homebrew's Python 2.7 run
         brew install python
 
-      Pip, setuptools, and wheel have been installed. To update them run
+      Pip, setuptools, and wheel are installed. To update them run
         pip3 install --upgrade pip setuptools wheel
 
       You can install Python packages with
@@ -440,7 +451,7 @@ __END__
  "_fcopyfile($module, in_fd, out_fd, flags, /)\n"
 --- Modules/pyexpat.c
 +++ Modules/pyexpat.c
-@@ -1185,7 +1185,8 @@ newxmlparseobject(pyexpat_state *state, 
+@@ -1233,7 +1233,8 @@ newxmlparseobject(pyexpat_state *state, 
  static int
  xmlparse_traverse(xmlparseobject *op, visitproc visit, void *arg)
  {
@@ -450,7 +461,7 @@ __END__
          Py_VISIT(op->handlers[i]);
      }
      Py_VISIT(Py_TYPE(op));
-@@ -1814,13 +1815,14 @@ add_model_module(PyObject *mod)
+@@ -1862,13 +1863,14 @@ add_model_module(PyObject *mod)
  static int
  add_features(PyObject *mod)
  {
@@ -488,7 +499,7 @@ __END__
      native_id = syscall(SYS_gettid);
 --- Lib/test/test_shutil.py
 +++ Lib/test/test_shutil.py
-@@ -2451,7 +2451,7 @@ class TestZeroCopySendfile(_ZeroCopyFileTest, unittest.TestCase):
+@@ -2601,7 +2601,7 @@ class TestZeroCopySendfile(_ZeroCopyFileTest, unittest.TestCase):
              shutil._USE_CP_SENDFILE = True
  
  

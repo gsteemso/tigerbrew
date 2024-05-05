@@ -10,9 +10,9 @@ class Python < Formula
     sha256 "2e35834cc056418aef2471eddb7b75a83fd3336b8c832bb0bbf13f140bb68dcc" => :tiger_altivec
   end
 
-  # Please don't add a wide/ucs4 option as it won't be accepted.
+  # Please don't add a wide/ucs4 option, as it won't be accepted.
   # More details in: https://github.com/Homebrew/homebrew/pull/32368
-  option :universal if Hardware::CPU.intel?
+  option :universal
   option "with-tcl-tk", "Use Tigerbrew's Tk instead of OS X Tk (has optional Cocoa and threads support)"
 
   # sphinx-doc depends on python, but on 10.6 or earlier python is fulfilled by
@@ -99,7 +99,6 @@ class Python < Formula
       --enable-framework=#{frameworks}
       --without-ensurepip
     ]
-
     args << "--without-gcc" if ENV.compiler == :clang
 
     cflags   = []
@@ -131,9 +130,17 @@ class Python < Formula
     end
 
     if build.universal?
-      ENV.universal_binary
-      ENV['HOMEBREW_OPTFLAGS'] = '-force_cpusubtype_ALL'
-      args << "--enable-universalsdk=/" << "--with-universal-archs=all"
+      ENV.permit_arch_flags
+      # a universal build of Python is done by the Python build scripts, not by Tigerbrew, and on
+      # PPC involves cross-compiling.  All traces of customization to a PowerPC CPU must be removed
+      # or the compiler will choke when building for other architectures.
+      if Hardware::CPU.ppc?
+        if superenv?
+          ENV['HOMEBREW_OPTFLAGS'] = ''
+        # add an else clause if it doesn’t build correctly under stdenv
+        end
+      end
+      args << "--enable-universalsdk=/" << "--with-universal-archs=#{Hardware::CPU.intel? ? 'intel' : 'all'}"
     end
 
     if build.with? "sqlite"
@@ -333,7 +340,7 @@ class Python < Formula
   end
 
   def caveats; <<~EOS
-    Pip and setuptools have been installed. To update them
+    Pip and setuptools are installed. To update them
       pip install --upgrade pip setuptools
 
     You can install Python packages with
@@ -351,7 +358,7 @@ class Python < Formula
     # and it can occur that building sqlite silently fails if OSX's sqlite is used.
     system "#{bin}/python", "-c", "import sqlite3"
     # Check if some other modules import. Then the linked libs are working.
-    system "#{bin}/python", "-c", "import Tkinter; root = Tkinter.Tk()"
+    system "#{bin}/python", "-c", "import Tkinter; root = Tkinter.Tk()" if build.with? 'tcl-tk'
     system bin/"pip", "list", "--format=columns"
   end
 end
