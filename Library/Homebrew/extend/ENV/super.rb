@@ -222,6 +222,9 @@ module Superenv
       arch = ARGV.bottle_arch || Hardware.oldest_cpu
       Hardware::CPU.optimization_flags.fetch(arch)
     elsif Hardware::CPU.intel? && !Hardware::CPU.sse4?
+      # If the CPU doesn't support SSE4, we cannot trust -march=native or
+      # -march=<cpu family> to do the right thing because we might be running
+      # in a VM or on a Hackintosh.
       Hardware::CPU.optimization_flags.fetch(Hardware.oldest_cpu)
     elsif compiler == :clang
       "-march=native"
@@ -230,7 +233,9 @@ module Superenv
     #   ""
     # ...that "elsewhere" appears to not yet exist, so, optimize here:
     else
-      Hardware::CPU.optimization_flags.fetch(Hardware::CPU.family)
+      hw_family = Hardware::CPU.family
+      hw_family = :g5 if hw_family == :g5_64
+      Hardware::CPU.optimization_flags.fetch(hw_family)
     end
   end
 
@@ -245,12 +250,12 @@ module Superenv
 
   public
 
-  # Changes the MAKEFLAGS environment variable, causing make to use a single job.
-  # This is useful for makefiles with race conditions.
-  # When passed a block, MAKEFLAGS is altered only for the duration of the block and is restored after its completion.
+  # Changes the MAKEFLAGS environment variable, causing make to use a single job.  This is useful
+  # for makefiles with race conditions.  When passed a block, MAKEFLAGS is altered only for the
+  # duration of the block and is restored after its completion.
   def deparallelize
     old = self["MAKEFLAGS"]
-    self["MAKEFLAGS"] = self["MAKEFLAGS"].sub(/(-\w*j)\d+/, "\\11")
+    self["MAKEFLAGS"] = self["MAKEFLAGS"].sub(/(-\w*j)\d+/, '\11')
     if block_given?
       begin
         yield
@@ -271,7 +276,6 @@ module Superenv
   def universal_binary
     permit_arch_flags
     self["HOMEBREW_ARCHFLAGS"] = Hardware::CPU.universal_archs.as_arch_flags
-    remove 'HOMEBREW_OPTFLAGS', '-arch ppc64' if Hardware::CPU.family = :g5_64
 
     # GCC doesn't accept "-march" for a 32-bit CPU with "-arch x86_64"
     if compiler != :clang && Hardware.is_32_bit?
@@ -294,19 +298,33 @@ module Superenv
   def m32
     permit_arch_flags
     append "HOMEBREW_ARCHFLAGS", "-m32"
+    if Hardware::CPU.ppc?
+      append 'HOMEBREW_ARCHFLAGS', '-arch ppc'
+    elsif Hardware::CPU.intel?
+      append 'HOMEBREW_ARCHFLAGS', '-arch i386'
+    end
   end
 
   def un_m32
     remove "HOMEBREW_ARCHFLAGS", "-m32"
+    remove 'HOMEBREW_ARCHFLAGS', '-arch ppc'
+    remove 'HOMEBREW_ARCHFLAGS', '-arch i386'
   end
 
   def m64
     permit_arch_flags
     append "HOMEBREW_ARCHFLAGS", "-m64"
+    if Hardware::CPU.ppc?
+      append 'HOMEBREW_ARCHFLAGS', '-arch ppc64'
+    elsif Hardware::CPU.intel?
+      append 'HOMEBREW_ARCHFLAGS', '-arch x86_64'
+    end
   end
 
   def un_m64
     remove "HOMEBREW_ARCHFLAGS", "-m64"
+    remove 'HOMEBREW_ARCHFLAGS', '-arch ppc64'
+    remove 'HOMEBREW_ARCHFLAGS', '-arch x86_64'
   end
 
   def cxx11

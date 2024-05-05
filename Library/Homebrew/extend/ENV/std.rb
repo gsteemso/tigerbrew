@@ -93,12 +93,12 @@ module Stdenv
     paths.select { |d| File.directory? d }.join(File::PATH_SEPARATOR)
   end
 
-  # Removes the MAKEFLAGS environment variable, causing make to use a single job.
-  # This is useful for makefiles with race conditions.
-  # When passed a block, MAKEFLAGS is removed only for the duration of the block and is restored after its completion.
+  # Changes the MAKEFLAGS environment variable, causing make to use a single job.  This is useful
+  # for makefiles with race conditions.  When passed a block, MAKEFLAGS is altered only for the
+  # duration of the block and is restored after its completion.
   def deparallelize
     old = self["MAKEFLAGS"]
-    remove "MAKEFLAGS", /-j\d+/
+    self["MAKEFLAGS"] = self["MAKEFLAGS"].sub(/(-\w*j)\d+/, '\11')
     if block_given?
       begin
         yield
@@ -270,28 +270,30 @@ module Stdenv
   end
 
   def m64
+    un_m32
     append_to_cflags "-m64"
     append "LDFLAGS", "-arch #{Hardware::CPU.arch_64_bit}"
   end
 
   def un_m64
     remove_from_cflags "-m64"
-    remove "LDFLAGS", "-arch #{Hardware::CPU.arch_64_bit}"
+    remove "LDFLAGS", "-arch ppc64"
+    remove "LDFLAGS", "-arch x86_64"
   end
 
   def m32
+    un_m64
     append_to_cflags "-m32"
     append "LDFLAGS", "-arch #{Hardware::CPU.arch_32_bit}"
   end
 
   def un_m32
     remove_from_cflags "-m32"
-    remove "LDFLAGS", "-arch #{Hardware::CPU.arch_32_bit}"
+    remove "LDFLAGS", "-arch ppc"
+    remove "LDFLAGS", "-arch i386"
   end
 
   def universal_binary
-    # those formulae which need to do this stuff "by hand", one iteration at a time, must remember
-    # to also handle the "-arch ppc64" optimization flag inherited from the cpu family :g5_64
     append_to_cflags Hardware::CPU.universal_archs.as_arch_flags
     append "LDFLAGS", Hardware::CPU.universal_archs.as_arch_flags
 
