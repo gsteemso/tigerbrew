@@ -16,7 +16,7 @@ class LibatomicOps < Formula
       --disable-dependency-tracking
       --enable-shared
     ]
-    args << (ARGV.verbose? ? '--disable-silent-rules' : '--enable-silent-rules')
+    args << (build.include?('verbose') ? '--disable-silent-rules' : '--enable-silent-rules')
 
     system "./configure", *args
     system "make"
