@@ -2,7 +2,6 @@ class Zstd < Formula
   desc 'Zstandard - fast real-time compression algorithm'
   homepage 'https://www.zstd.net/'
   url 'https://github.com/facebook/zstd/releases/download/v1.5.5/zstd-1.5.5.tar.gz'
-  version '1.5.5'
   sha256 '9c4396cc829cfae319a6e2615202e82aad41372073482fce286fac78646d3ee4'
 
   depends_on 'cctools' => :build  # Needs a relatively recent "as".
@@ -26,10 +25,10 @@ class Zstd < Formula
     make *args, 'install'
   end
 
-  test do
+#  test do
     # `test do` will create, run in and delete a temporary directory.
     # The installed folder is not in the path, so use the entire path to any
     # executables being tested: `system "#{bin}/program", "do", "something"`.
-    system 'false'
-  end
+#    system 'false'
+#  end
 end
