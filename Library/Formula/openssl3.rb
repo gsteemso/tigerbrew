@@ -6,31 +6,12 @@ class Openssl3 < Formula
   license "Apache-2.0"
 
   option :universal
+  option 'without-tests', 'Skip the self-test procedure (not recommended for a first install)'
 
   keg_only :provided_by_osx
 
   depends_on "curl-ca-bundle"
   depends_on "perl"
-
-  # `class_exec` doesn't exist in Tiger/Leopard stock Ruby.  Ideally, find a workaround
-  Pathname.class_exec {
-    # binread does not exist in Leopard stock Ruby 1.8.6, and Tigerbrew's
-    # cobbled-in version doesn't work, so use this instead
-    def b_read(offset = 0, length = self.size)
-      self.open('rb') do |f|
-        f.pos = offset
-        f.read(length)
-      end
-    end unless method_defined?(:b_read)
-
-    def is_bare_mach_o?
-      # MH_MAGIC    = 'feedface'
-      # MH_MAGIC_64 = 'feedfacf' -- same value with lowest-order bit inverted
-      self.file? and
-      self.size >= 4 and
-      [self.b_read(0,4).unpack('N').first & 0xfffffffe].pack('N').unpack('H8').first == 'feedface'
-    end unless method_defined?(:is_bare_mach_o?)
-  }
 
   def arg_format(arch)
     case arch
@@ -73,31 +54,31 @@ class Openssl3 < Formula
         dirs << dir
       end
 
-      args = [
+      configure_args = [
         "--prefix=#{prefix}",
         "--openssldir=#{openssldir}",
         arg_format(arch)
       ]
       # the assembly routines don’t work right on Tiger or on 32-bit PPC
-      args << "no-asm" if (MacOS.version < :leopard or arch == :ppc)
+      configure_args << "no-asm" if (MacOS.version < :leopard or arch == :ppc)
       # No {get,make,set}context support before Leopard
-      args << "no-async" if MacOS.version < :leopard
+      configure_args << "no-async" if MacOS.version < :leopard
 
-      system "perl", "./Configure", *args
-      ENV.deparallelize do 
+      system "perl", "./Configure", *configure_args
+      ENV.deparallelize do
         system "make"
         system "make", "install", "MANDIR=#{man}", "MANSUFFIX=ssl"
-        system "make", "test"
+        system "make", "test" if build.with? 'tests'
       end
 
       if build.universal?
         system 'make', 'clean'
-        Merge.scour_keg(prefix, dir, '')
+        Merge.scour_keg(prefix, dir)
         # undo architecture-specific tweak before next run
         ENV.remove_from_cflags "-arch #{arch}"
-      end
+      end # universal?
     end # archs.each
-    Merge.mach_o(prefix, dirs, '') if build.universal?
+    Merge.mach_o(prefix, dirs) if build.universal?
   end # install
 
   def openssldir
@@ -110,7 +91,7 @@ class Openssl3 < Formula
   end
 
   def caveats
-    <<~EOS
+    <<-EOS.undent
       A CA file has been bootstrapped using certificates from the system
       keychain. To add additional certificates, place .pem files in
         #{openssldir}/certs
@@ -137,37 +118,74 @@ class Openssl3 < Formula
 end # Openssl3
 
 class Merge
-  def self.scour_keg(keg_prefix, stash, sub_path)
-    s_p = (sub_path == '' ? '' : sub_path + '/')
-    Dir["#{keg_prefix}/#{s_p}*"].each do |f|
-      pn = Pathname(f)
-      spb = s_p + pn.basename
-      if pn.directory?
-        mkdir "#{stash}/#{spb}"
-        scour_keg(keg_prefix, stash, spb)
-      elsif ((not pn.symlink?) and pn.is_bare_mach_o?)
-        cp pn, "#{stash}/#{spb}"
-      end
-    end
-  end # scour_keg
-
-  def self.mach_o(install_prefix, root_dir, archs, sub_path)
-    s_p = (sub_path == '' ? '' : sub_path + '/')
-    Dir["#{root_dir}/#{archs.first}/#{s_p}*"].each do |f|
-      pn = Pathname(f)
-      spb = s_p + pn.basename
-      if pn.directory?
-        mach_o_stashes(install_prefix, root_dir, archs, spb)
+  module Pathname_extension
+    def is_bare_mach_o?
+      # header word 0, magic signature:
+      #   MH_MAGIC    = 'feedface' – value with lowest‐order bit clear
+      #   MH_MAGIC_64 = 'feedfacf' – same value with lowest‐order bit set
+      # low‐order 24 bits of header word 1, CPU type:  7 is x86, 12 is ARM, 18 is PPC
+      # header word 3, file type:  no types higher than 10 are defined
+      # header word 5, net size of load commands, is far smaller than the filesize
+      if (self.file? and self.size >= 28 and mach_header = self.binread(24).unpack('N6'))
+        raise('Fat binary found where bare Mach-O file expected') if mach_header[0] == 0xcafebabe
+        ((mach_header[0] & 0xfffffffe) == 0xfeedface and
+          [7, 12, 18].detect { |item| (mach_header[1] & 0x00ffffff) == item } and
+          mach_header[3] < 11 and
+          mach_header[5] < self.size)
       else
-        arch_files = Dir["#{root_dir}/{#{archs.join(',')}}/#{spb}"]
-        if arch_files.length > 1
-          system 'lipo', '-create', *arch_files, '-output', install_prefix/spb
-        else
-          # presumably there's a reason this only exists for one architecture, so no error
-          # same rationale would apply if it only existed in, say, two out of three
-          cp arch_files.first, install_prefix/spb
+        false
+      end
+    end unless method_defined?(:is_bare_mach_o?)
+  end # Pathname_extension
+
+  class << self
+    include FileUtils
+
+    def scour_keg(keg_prefix, stash, sub_path = '')
+      # don’t suffer a double slash when sub_path is null:
+      s_p = (sub_path == '' ? '' : sub_path + '/')
+      Dir["#{keg_prefix}/#{s_p}*"].each do |f|
+        pn = Pathname(f).extend(Pathname_extension)
+        spb = s_p + pn.basename
+        if pn.directory?
+          Dir.mkdir "#{stash}/#{spb}"
+          scour_keg(keg_prefix, stash, spb)
+        # the number of things that look like Mach-O files but aren’t is horrifying, so test
+        elsif ((not pn.symlink?) and pn.is_bare_mach_o?)
+          cp pn, "#{stash}/#{spb}"
         end
       end
-    end
-  end # mach_o
+    end # scour_keg
+
+    def mach_o(install_prefix, arch_dirs, sub_path = '')
+      # don’t suffer a double slash when sub_path is null:
+      s_p = (sub_path == '' ? '' : sub_path + '/')
+      # generate a full list of files, even if some are not present on all architectures; bear in
+      # mind that the current _directory_ may not even exist on all archs
+      basename_list = []
+      arch_dir_list = arch_dirs.join(',')
+      Dir["{#{arch_dir_list}}/#{s_p}*"].map { |f|
+        File.basename(f)
+      }.each do |b|
+        basename_list << b unless basename_list.count(b) > 0
+      end
+      basename_list.each do |b|
+        spb = s_p + b
+        the_arch_dir = arch_dirs.detect { |ad| File.exist?("#{ad}/#{spb}") }
+        pn = Pathname("#{the_arch_dir}/#{spb}")
+        if pn.directory?
+          mach_o(install_prefix, arch_dirs, spb)
+        else
+          arch_files = Dir["{#{arch_dir_list}}/#{spb}"]
+          if arch_files.length > 1
+            system 'lipo', '-create', *arch_files, '-output', install_prefix/spb
+          else
+            # presumably there's a reason this only exists for one architecture, so no error;
+            # the same rationale would apply if it only existed in, say, two out of three
+            cp arch_files.first, install_prefix/spb
+          end # if > 1 file?
+        end # if directory?
+      end # basename_list.each
+    end # mach_o
+  end # << self
 end # Merge
