@@ -28,13 +28,12 @@ class Libidn2 < Formula
 
   depends_on "pkg-config" => :build
   depends_on "libunistring"
-  depends_on "gettext"
 
   def install
     ENV.universal_binary if build.universal?
 
-    args = ["--disable-silent-rules", "--with-packager=Homebrew", "--prefix=#{prefix}"]
-    args << "--with-libintl-prefix=#{Formula["gettext"].opt_prefix}"
+    args = ["--with-packager=Homebrew", "--prefix=#{prefix}"]
+    args << (build.include?('verbose') ? '--disable-silent-rules' : '--enable-silent-rules')
 
     system "./bootstrap", "--skip-po" if build.head?
     system "./configure", *args
