@@ -4,8 +4,6 @@ class Pcre2 < Formula
   url "https://github.com/PCRE2Project/pcre2/releases/download/pcre2-10.43/pcre2-10.43.tar.bz2"
   sha256 "e2a53984ff0b07dfdb5ae4486bbb9b21cca8e7df2434096cc9bf1b728c350bcb"
 
-  option :universal
-
   head do
     url "https://github.com/PCRE2Project/pcre2"
 
@@ -13,6 +11,8 @@ class Pcre2 < Formula
     depends_on "automake" => :build
     depends_on "libtool" => :build
   end
+
+  option :universal
 
   # Fix JIT support on Mac OSes before 11.0
   # (previous patch for Tiger compatibility now incorporated upstream)
@@ -39,6 +39,7 @@ class Pcre2 < Formula
       --enable-pcre2grep-libbz2
       --enable-pcre2test-libedit
     ]
+    args << (build.include?('verbose') ? '--disable-silent-rules' : '--enable-silent-rules')
     # PPC64 JIT is explicitly supported in the package’s source code, but for reasons yet to be
     # determined, fails to build properly under Mac OS 10.5
     args << "--enable-jit" unless Hardware::CPU.ppc? and MacOS.prefer_64_bit?
