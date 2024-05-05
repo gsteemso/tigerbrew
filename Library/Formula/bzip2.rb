@@ -11,7 +11,11 @@ class Bzip2 < Formula
 
   keg_only :provided_by_osx
 
+  option :universal
+
   def install
+    ENV.universal_binary if build.universal?
+
     inreplace "Makefile", "$(PREFIX)/man", "$(PREFIX)/share/man"
 
     system "make", "clean"
