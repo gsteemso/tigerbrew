@@ -93,7 +93,7 @@ class Pathname
     open("w", *open_args) { |f| f.write(content) }
   end
 
-  # this function does not exist even in Ruby 2.0
+  # this function does not exist in Leopard stock Ruby 1.8.6
   def binwrite(datum, offset = 0)
     self.open('r+b') do |f|
       f.pos = offset
