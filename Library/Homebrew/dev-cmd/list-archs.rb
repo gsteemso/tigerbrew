@@ -204,8 +204,18 @@ module Homebrew
     no_archs_msg = false
     requested.each do |keg|
       max_arch_count = 0
-      final_report = ''
-      final_foreign_parts = []
+      # file count and list of native architectures, for each of 1- through 6-architecture Mach-O
+      # and fat-binary files (element 0 is unused)
+      arch_reports = [
+        {:file_count => 0, :native_parts => []},
+        {:file_count => 0, :native_parts => []},
+        {:file_count => 0, :native_parts => []},
+        {:file_count => 0, :native_parts => []},
+        {:file_count => 0, :native_parts => []},
+        {:file_count => 0, :native_parts => []},
+        {:file_count => 0, :native_parts => []}
+      ]
+      alien_reports = []
       scour(keg.to_s).each do |mo|
         sig = mo.mach_o_signature?
         if sig == :FAT_MAGIC
@@ -214,61 +224,112 @@ module Homebrew
           #   negative, zero, one, or implausibly large, it probably isn't actually a fat binary.
           # Pick an upper limit of 6 in case we ever have to handle ARM/ARM64 builds or whatever.
           if (arch_count > 1 and arch_count <= 6)
-            if arch_count > max_arch_count
-              # we've got a more accurate contender; replace the existing report
-              max_arch_count = arch_count
-              parts = []
-              0.upto(arch_count - 1) do |i|
-                parts << {
-                  :type => mo.binread(4, 8 + 20*i).unpack('H8').first,
-                  :subtype => mo.binread(4, 12 + 20*i).unpack('H8').first
-                }
-              end # do |i|
-              report = []
-              foreign_parts = []
-              parts.each do |part|
-                if arch = cpu_valid(part[:type], part[:subtype])
-                  report << Term_seq.in_br_cyan(arch)
-                else
-                  ct = (CPU_TYPES[part[:type]] or part[:type])
-                  foreign_parts << "[foreign CPU type #{Term_seq.in_cyan(ct)} with subtype #{Term_seq.in_cyan(part[:subtype])}]"
-                end # if-else arch
-              end # do |part|
-              final_report = "#{Term_seq.in_white(keg.name)} is built for #{Term_seq.in_br_white(arch_count)} architectures:  #{report.join(', ')}."
-              final_foreign_parts = foreign_parts
-            end # if arch_count > max_arch_count
-          end # if arch_count > 1
-        elsif sig # :MH_MAGIC, :MH_MAGIC_64
-          unless max_arch_count > 0
-            max_arch_count = 1
-            cpu = {
-              :type => mo.binread(4, 4).unpack('H8').first,
-              :subtype => mo.binread(4, 8).unpack('H8').first
-            }
-            if arch = cpu_valid(cpu[:type], cpu[:subtype])
-              final_report = "#{Term_seq.in_white(keg.name)} is built for #{Term_seq.in_br_white('one')} architecture:  #{Term_seq.in_br_cyan(arch)}."
+            arch_reports[arch_count][:file_count] += 1
+            max_arch_count = arch_count if arch_count > max_arch_count
+            # generate a report for file found containing this number of architectures
+            parts = []
+            0.upto(arch_count - 1) do |i|
+              parts << {
+                :type => mo.binread(4, 8 + 20*i).unpack('H8').first,
+                :subtype => mo.binread(4, 12 + 20*i).unpack('H8').first
+              }
+            end # do each |i|
+            native_parts = []
+            foreign_parts = []
+            parts.each do |part|
+              if arch = cpu_valid(part[:type], part[:subtype])
+                native_parts << Term_seq.in_br_cyan(arch)
+              else
+                ct = (CPU_TYPES[part[:type]] or part[:type])
+                foreign_parts << "[foreign CPU type #{Term_seq.in_cyan(ct)} with subtype #{Term_seq.in_cyan(part[:subtype])}."
+              end # arch?
+            end # do each |part|
+            # sort ppc64 after all other ppc types
+            native_parts.sort! do |a, b|
+              # the SGR sequences at beginning and end are 5 characters each
+              if (a[5..7] == 'ppc' and b[5..7] == 'ppc')
+                if a[8..-6] == '64'
+                  1
+                elsif b[8..-6] == '64'
+                  -1
+                else 
+                  a <=> b
+                end
+              else
+                a <=> b
+              end # ppc_x_?
+            end # sort!
+            if arch_reports[arch_count][:native_parts] = []
+              arch_reports[arch_count][:native_parts] << {:archlist_count => 1, :archlist => native_parts}
             else
-              ct = (CPU_TYPES[cpu[:type]] or cpu[:type])
-              final_report = "#{Term_seq.in_white(keg.name)} is built for something foreign, with CPU type #{Term_seq.in_cyan(ct)} and subtype #{Term_seq.in_cyan(cpu[:subtype])}."
-            end # if-else arch
-          end # unless max_arch_count
-        end # if-elsif sig
-      end # do |mo|
+              arch_reports[arch_count][:native_parts].each do |np|
+                if np[:archlist] == native_parts
+                  np[:archlist_count] += 1
+                else
+                  np << {:archlist_count => 1, :archlist => native_parts}
+                end # is archlist already seen?
+              end # do each |np|
+            end # already got any :native_parts?
+            alien_reports << "File #{Term_seq.in_white(mo)}:\n  #{foreign_parts.join("\n  ")}\n" if foreign_parts != []
+          end # 1 < arch_count <= 6 ?
+        elsif sig # :MH_MAGIC, :MH_MAGIC_64
+          arch_reports[1][:file_count] += 1
+          max_arch_count = 1 if max_arch_count == 0
+          # generate a report for file found containing one architecture
+          cpu = {
+            :type => mo.binread(4, 4).unpack('H8').first,
+            :subtype => mo.binread(4, 8).unpack('H8').first
+          }
+          if arch = cpu_valid(cpu[:type], cpu[:subtype])
+            native_part = [Term_seq.in_br_cyan(arch)]
+            if arch_reports[1][:native_parts] = []
+              arch_reports[1][:native_parts] << {:archlist_count => 1, :archlist => native_part}
+            else
+              arch_reports[1][:native_parts].each do |np|
+                if np[:archlist] == native_part
+                  np[:archlist_count] += 1
+                else
+                  np << {:archlist_count => 1, :archlist => native_part}
+                end # is archlist already seen?
+              end # do each |np|
+            end # already got any :native_parts?
+          else # alien arch
+            ct = (CPU_TYPES[cpu[:type]] or cpu[:type])
+            alien_reports << "File #{Term_seq.in_white(mo)}:\n  [foreign CPU type #{Term_seq.in_cyan(ct)} with subtype #{Term_seq.in_cyan(cpu[:subtype])}.\n"
+          end # native arch?
+        end # Mach-O sig?
+      end # do each |mo|
       if max_arch_count == 0
-        oho "#{Term_seq.in_white(keg.name)} appears to contain #{Term_seq.in_yellow('no valid Mach-O architectures')}."
+        oho "#{Term_seq.in_white(keg.name)} appears to contain #{Term_seq.in_yellow('no valid Mach-O files')}."
         no_archs_msg = true
-      elsif final_foreign_parts
-        ohey final_report, final_foreign_parts.join("\n")
       else
-        oho final_report
-      end # if no archs elsif foreign archs else
-    end # do |keg|
+        ohey("#{Term_seq.in_white(keg.name)} appears to contain some foreign code:", alien_reports.join('')) if alien_reports != []
+        modal_average = 0
+        arch_index = 0
+        arch_reports.each_index do |i|
+          if arch_reports[i][:file_count] >= modal_average
+            modal_average = arch_reports[i][:file_count]
+            arch_index = i
+          end # did more files have _this_ many architectures?
+        end # do each |i|
+        modal_average = 0
+        archlist_index = 0
+        arch_reports[arch_index][:native_parts].each_index do |i|
+          if arch_reports[arch_index][:native_parts][i][:archlist_count] > modal_average
+            modal_average = arch_reports[arch_index][:native_parts][i][:archlist_count]
+            archlist_index = i
+          end # did more files have _this_ specific list of architectures?
+        end # do each |i|
+        architectures = 'architecture' + plural(arch_index)
+        oho "#{Term_seq.in_white(keg.name)} is built for #{Term_seq.in_br_white(arch_index)} #{architectures}:  #{arch_reports[arch_index][:native_parts][archlist_index][:archlist].join(', ')}."
+      end # any archs found?
+    end # do each |keg|
     if no_archs_msg
       puts <<-_.undent
         Sometimes a successful brew produces no Mach-O files.  This can happen if, for
         example, the formula responsible installs only header or documentation files.
       _
-    end # if no_archs_msg
+    end # no_archs_msg?
   end # list_archs
 end # Homebrew
 

@@ -29,7 +29,8 @@ module Homebrew
         puts_columns full_names
       else
         ENV["CLICOLOR"] = nil
-        exec "ls", *ARGV.options_only << HOMEBREW_CELLAR
+        # need to exclude --flags, because they choke `ls`
+        exec "ls", *((ARGV.options_only - ARGV.flags_only) << HOMEBREW_CELLAR)
       end
     elsif ARGV.verbose? || !$stdout.tty?
       exec "find", *ARGV.kegs.map(&:to_s) + %w[-not -type d -print]

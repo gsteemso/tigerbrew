@@ -24,14 +24,6 @@ when '-V', '--version'
   exit 0
 end
 
-# `audit --strict` gets pissy if you use `ARGV.thingumabob?` instead of `build.include?` to test
-# for these – but ARGV is the only one of the two that checks the environment variables too; so do
-# an end run, and just copy any that are environment‐only into ARGV.
-ARGV << '--verbose' if ARGV.verbose? and not ARGV.flag?('--verbose')
-ARGV << '--debug' if ARGV.debug? and not ARGV.flag?('--debug')
-ARGV << '--homebrew_developer' if ARGV.homebrew_developer? and not ARGV.include?('--homebrew_developer')
-ARGV << '--sandbox' if ARGV.sandbox? and not ARGV.include?('--sandbox')
-
 # Check for bad xcode-select before anything else, because `doctor` and
 # many other things will hang
 # Note that this bug was fixed in 10.9
