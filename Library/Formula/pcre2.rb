@@ -17,8 +17,13 @@ class Pcre2 < Formula
   # Fix JIT support on Mac OSes before 11.0
   # (previous patch for Tiger compatibility now incorporated upstream)
   patch :p0 do
+<<<<<<< HEAD
    url "https://raw.githubusercontent.com/macports/macports-ports/master/devel/pcre/files/MAP_JIT.patch"
    sha256 "abbf0ece0c75581d653d4556eee4c5d27ef4505a8a6298f79c7f87f4a72da49d"
+=======
+   url "https://raw.githubusercontent.com/macports/macports-ports/661d0212412d4f428a37d31e233fa6ca1efd4331/devel/pcre/files/no-OSCacheControl-on-tiger.diff"
+   sha256 "eac8b57207586f537382ebce98b0f36476bd50118e349fd8153980a2fc65be02"
+>>>>>>> 93f9e2cc68 (pcre2: fix non-existing patchfile (#1117))
   end
 
   # Fix thread support – uncertain if actually needed but other distros use it
