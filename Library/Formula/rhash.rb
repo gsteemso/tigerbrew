@@ -11,6 +11,8 @@ class Rhash < Formula
     sha256 "fdc0ebee393653a808ddecd5692922b47e5dbab276ec31731f035663ec7f3f32" => :tiger_altivec
   end
 
+  option :universal
+
   # wants to pass -install_name to the linker
   depends_on :ld64
 
@@ -26,6 +28,7 @@ class Rhash < Formula
   patch :DATA
 
   def install
+    ENV.universal_binary if build.universal?
     # install target isn't parallel-safe
     ENV.j1
 
