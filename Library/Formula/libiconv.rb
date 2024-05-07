@@ -12,6 +12,8 @@ class Libiconv < Formula
 
   keg_only :provided_by_osx
 
+  option :universal
+
   patch do
     url "https://raw.githubusercontent.com/Homebrew/patches/9be2793af/libiconv/patch-utf8mac.diff"
     sha256 "e8128732f22f63b5c656659786d2cf76f1450008f36bcf541285268c66cabeab"
@@ -20,14 +22,17 @@ class Libiconv < Formula
   patch :DATA
 
   def install
+    ENV.universal_binary if build.universal?
     ENV.deparallelize
     system "./configure", "--disable-debug",
                           "--disable-dependency-tracking",
                           "--prefix=#{prefix}",
                           "--enable-extra-encodings",
                           "--enable-static",
-                          "--docdir=#{doc}"
+                          "--docdir=#{doc}",
+                          (ARGV.verbose? ? '--disable-silent-rules' : '--enable-silent-rules')
     system "make", "-f", "Makefile.devel", "CFLAGS=#{ENV.cflags}", "CC=#{ENV.cc}"
+    system 'make', 'check'
     system "make", "install"
   end
 
