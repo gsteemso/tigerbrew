@@ -100,7 +100,7 @@ class Libuv < Formula
 
     system "./autogen.sh"
     system "./configure", "--disable-dependency-tracking",
-                          "--disable-silent-rules",
+                          (ARGV.verbose? ? '--disable-silent-rules' : '--enable-silent-rules'),
                           "--prefix=#{prefix}"
     system "make"
     system "make", "check" if build.with? "check"
@@ -121,6 +121,8 @@ class Libuv < Formula
         return 0;
       }
     EOS
+
+    ENV.universal_binary if build.universal?
     system ENV.cc, "test.c", "-luv", "-o", "test"
     system "./test"
   end
