@@ -60,6 +60,10 @@ class BerkeleyDb4 < Formula
 
     Merge.mach_o(prefix, dirs) if build.universal?
   end # install
+
+  test do
+    system bin/'db_stat', '-V'
+  end # test
 end
 
 class Merge
