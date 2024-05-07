@@ -56,7 +56,7 @@ class Gettext < Formula
         --without-cvs
         --without-xz
       ]
-      args << (build.include?('verbose') ? "--disable-silent-rules" : "--enable-silent-rules")
+      args << (ARGV.verbose? ? "--disable-silent-rules" : "--enable-silent-rules")
 
       system './configure', *args
       system 'make'

@@ -11,7 +11,7 @@ class Libunistring < Formula
     ENV.universal_binary if build.universal?
 
     system "./configure", "--disable-dependency-tracking",
-                          (build.include?('verbose') ? '--disable-silent-rules' : '--enable-silent-rules'),
+                          (ARGV.verbose? ? '--disable-silent-rules' : '--enable-silent-rules'),
                           "--prefix=#{prefix}"
     system "make"
     system "make", "install"

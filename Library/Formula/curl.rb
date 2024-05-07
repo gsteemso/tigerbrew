@@ -53,7 +53,7 @@ class Curl < Formula
       --with-libidn2
       --with-zlib=#{Formula["zlib"].opt_prefix}
     ]
-    args << (build.include?('verbose') ? "--disable-silent-rules" : "--enable-silent-rules")
+    args << (ARGV.verbose? ? "--disable-silent-rules" : "--enable-silent-rules")
 
     # cURL has a new firm desire to find ssl with PKG_CONFIG_PATH instead of using
     # "--with-ssl" any more. "when possible, set the PKG_CONFIG_PATH environment

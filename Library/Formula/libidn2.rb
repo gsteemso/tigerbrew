@@ -33,7 +33,7 @@ class Libidn2 < Formula
     ENV.universal_binary if build.universal?
 
     args = ["--with-packager=Homebrew", "--prefix=#{prefix}"]
-    args << (build.include?('verbose') ? '--disable-silent-rules' : '--enable-silent-rules')
+    args << (ARGV.verbose? ? '--disable-silent-rules' : '--enable-silent-rules')
 
     system "./bootstrap", "--skip-po" if build.head?
     system "./configure", *args

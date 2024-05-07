@@ -39,7 +39,7 @@ class Pcre2 < Formula
       --enable-pcre2grep-libbz2
       --enable-pcre2test-libedit
     ]
-    args << (build.include?('verbose') ? '--disable-silent-rules' : '--enable-silent-rules')
+    args << (ARGV.verbose? ? '--disable-silent-rules' : '--enable-silent-rules')
     # PPC64 JIT is explicitly supported in the package’s source code, but for reasons yet to be
     # determined, fails to build properly under Mac OS 10.5
     args << "--enable-jit" unless Hardware::CPU.ppc? and MacOS.prefer_64_bit?

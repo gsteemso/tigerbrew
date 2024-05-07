@@ -27,7 +27,7 @@ class Gdbm < Formula
       --disable-dependency-tracking
       --prefix=#{prefix}
     ]
-    args << (build.include?('verbose') ? "--disable-silent-rules" : "--enable-silent-rules")
+    args << (ARGV.verbose? ? "--disable-silent-rules" : "--enable-silent-rules")
     args << "--enable-libgdbm-compat" if build.with? "libgdbm-compat"
 
     system "./configure", *args
