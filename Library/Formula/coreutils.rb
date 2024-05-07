@@ -53,6 +53,7 @@ class Coreutils < Formula
       --prefix=#{prefix}
       --program-prefix=g
     ]
+    args << (ARGV.verbose? ? '--disable-silent-rules' : '--enable-silent-rules')
     args << "--without-gmp" if build.without? "gmp"
     system "./configure", *args
     system "make", "install"

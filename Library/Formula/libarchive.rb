@@ -40,7 +40,7 @@ class Libarchive < Formula
         --without-xml2
         --without-expat
       ]
-      args << (build.include?('verbose') ? '--disable-silent-rules' : '--enable-silent-rules')
+      args << (ARGV.verbose? ? '--disable-silent-rules' : '--enable-silent-rules')
       system "./configure", *args
       system 'make'
       system "make", "install"
