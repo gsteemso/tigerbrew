@@ -1,29 +1,29 @@
-# Comprehensively test a formula or pull request.
-#
-# Usage: brew test-bot [options...] <pull-request|formula>
-#
-# Options:
-# --keep-logs:     Write and keep log files under ./brewbot/
-# --cleanup:       Clean the Homebrew directory. Very dangerous. Use with care.
-# --clean-cache:   Remove all cached downloads. Use with care.
-# --skip-setup:    Don't check the local system is setup correctly.
-# --skip-homebrew: Don't check Homebrew's files and tests are all valid.
-# --junit:         Generate a JUnit XML test results file.
-# --email:         Generate an email subject file.
-# --no-bottle:     Run brew install without --build-bottle
-# --keep-old:      Run brew bottle --keep-old to build new bottles for a single platform.
-# --HEAD:          Run brew install with --HEAD
-# --local:         Ask Homebrew to write verbose logs under ./logs/ and set HOME to ./home/
-# --tap=<tap>:     Use the git repository of the given tap
-# --dry-run:       Just print commands, don't run them.
-# --fail-fast:     Immediately exit on a failing step.
-# --verbose:       Print out all logs in realtime
-#
-# --ci-master:           Shortcut for Homebrew master branch CI options.
-# --ci-pr:               Shortcut for Homebrew pull request CI options.
-# --ci-testing:          Shortcut for Homebrew testing CI options.
-# --ci-upload:           Homebrew CI bottle upload.
-# --ci-reset-and-update: Homebrew CI repository and tap reset and update.
+#: Comprehensively test a formula or pull request.
+#:
+#: Usage: brew test-bot [options...] <pull-request|formula>
+#:
+#: Options:
+#: --keep-logs:     Write and keep log files under ./brewbot/
+#: --cleanup:       Clean the Homebrew directory. Very dangerous. Use with care.
+#: --clean-cache:   Remove all cached downloads. Use with care.
+#: --skip-setup:    Don't check the local system is setup correctly.
+#: --skip-homebrew: Don't check Homebrew's files and tests are all valid.
+#: --junit:         Generate a JUnit XML test results file.
+#: --email:         Generate an email subject file.
+#: --no-bottle:     Run brew install without --build-bottle
+#: --keep-old:      Run brew bottle --keep-old to build new bottles for a single platform.
+#: --HEAD:          Run brew install with --HEAD
+#: --local:         Ask Homebrew to write verbose logs under ./logs/ and set HOME to ./home/
+#: --tap=<tap>:     Use the git repository of the given tap
+#: --dry-run:       Just print commands, don't run them.
+#: --fail-fast:     Immediately exit on a failing step.
+#: --verbose:       Print out all logs in realtime
+#:
+#: --ci-master:           Shortcut for Homebrew master branch CI options.
+#: --ci-pr:               Shortcut for Homebrew pull request CI options.
+#: --ci-testing:          Shortcut for Homebrew testing CI options.
+#: --ci-upload:           Homebrew CI bottle upload.
+#: --ci-reset-and-update: Homebrew CI repository and tap reset and update.
 
 require "formula"
 require "utils"
