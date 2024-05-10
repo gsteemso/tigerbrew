@@ -23,6 +23,7 @@ begin
   formula.extend(Homebrew::Assertions)
   if ARGV.debug?
     formula.extend(Debrew::Formula)
+    raise "test returned false" if formula.run_test == false
   else
     # tests can also return false to indicate failure
     Timeout.timeout TEST_TIMEOUT_SECONDS do
