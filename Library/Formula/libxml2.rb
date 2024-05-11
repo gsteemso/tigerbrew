@@ -1,8 +1,8 @@
 class Libxml2 < Formula
   desc "GNOME XML library"
   homepage "http://xmlsoft.org"
-  url "https://download.gnome.org/sources/libxml2/2.11/libxml2-2.11.6.tar.xz"
-  sha256 "c90eee7506764abbe07bb616b82da452529609815aefef423d66ef080eb0c300"
+  url "https://download.gnome.org/sources/libxml2/2.12/libxml2-2.12.6.tar.xz"
+  sha256 "889c593a881a3db5fdd96cc9318c87df34eb648edfc458272ad46fd607353fbb"
 
   head do
     url "https://git.gnome.org/browse/libxml2", :using => :git
@@ -14,11 +14,12 @@ class Libxml2 < Formula
 
   option :universal
 
-  depends_on 'icu4c' => :recommended
-  depends_on "python" => :optional
-  depends_on "python3" if build.with? "python"
+  depends_on 'python' => :optional
+  depends_on 'python3' if build.with? 'python'
+  depends_on 'libiconv'
   depends_on "xz"
   depends_on "zlib"
+  depends_on 'pkg-config' => :build
 
   keg_only :provided_by_osx
 
@@ -33,17 +34,20 @@ class Libxml2 < Formula
     args = %W[
       --prefix=#{prefix}
       --disable-dependency-tracking
-      --with-ftp
+      --without-debug
+      --with-iconv=#{Formula['libiconv'].opt_prefix}
       --with-lzma=#{Formula["xz"].opt_prefix}
       --with-zlib=#{Formula["zlib"].opt_prefix}
     ]
-    args << "--with-icu=#{Formula["icu4c"].opt_prefix}" if build.with? 'icu4c'
     # the package builds the python bindings by default
     args << "--without-python" if build.without? "python"
 
     system "./configure", *args
+    inreplace ['Makefile', 'python/Makefile'], '-lpython2.7', '-undefined dynamic_lookup'
     system "make"
-    system "make", "check"
+    system "make", "check" if (build.without?('python') or
+                               ((not build.universal?) and (not Tab.for_name('python').universal?)) or
+                               (build.universal? and Tab.for_name('python').universal?) )
     system "make", "install"
 
     if build.with? "python"
@@ -56,14 +60,11 @@ class Libxml2 < Formula
   end
 
   def caveats
-    if build.with? "python"
+    if build.with? 'python'
       <<-EOS.undent
-        The Python installer warns loudly of a failed test.  While the warning is,
-        technically, correct, it is misleading – this is a keg-only brew and your
-        Python is not _supposed_ to be able to see it without help.
-
-        Put briefly:  Ignore the huge, strident failure message -- the installation
-        is, in fact, successful.
+        The Python installer warns of a failed test.  While technically correct, it is
+        misleading – this is a keg-only brew and your Python is not SUPPOSED to be able
+        to see it without help.  Ignore the warning -- the installation is successful.
       EOS
     end
   end
@@ -81,6 +82,7 @@ class Libxml2 < Formula
         return 0;
       }
     EOS
+    ENV.universal_binary if build.universal?
     args = `#{bin}/xml2-config --cflags --libs`.split
     args += %w[test.c -o test]
     system ENV.cc, *args
