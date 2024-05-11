@@ -340,8 +340,8 @@ end # Homebrew
 #:
 #:This command lists what hardware architectures each given /installed formula/
 #:was brewed for.  The information supplied by the brewing system is uneven, so
-#:PowerPC code is labelled with more specificity than code that can be executed
-#:on Intel-compatible CPUs.
+#:code built for PowerPC CPUs is labelled with more specificity than code built
+#:for Intel-compatible CPUs.
 #:
 #:The results are shown after a short delay.  (Certain formulae do weird things
 #:which require every last file within each keg to be examined.)
