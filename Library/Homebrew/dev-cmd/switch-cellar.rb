@@ -44,33 +44,38 @@ module Homebrew
     HOMEBREW_CELLAR.parent.cd do
       mode = OpenStruct.new
       mode.dry_run = ARGV.dry_run?
-      # a pathname – either absolute, or relative to the current (Cellar’s parent) directory:
-      cellar_stash = Pathname(annulnil ARGV.value('save-as'))
-      if cellar_stash == ''
-        raise UsageError
-      elsif cellar_stash.exist?
-        raise "#{cellar_stash.realpath}:  Cannot overwrite existing file or directory."
-      end
-      sever_cellar(mode)
-      begin
-        HOMEBREW_CELLAR.rename cellar_stash
-      rescue
+      if ARGV.include? '--refresh'  # regenerating links in place
+        sever_cellar(mode)
         unsever_cellar(mode)
-        raise RuntimeError
-      end
-      # a pathname – either absolute, or relative to the current (Cellar’s parent) directory:
-      new_cellar = Pathname(annulnil ARGV.value('use-new'))
-      if (new_cellar != '' and new_cellar.exist?)
+      else  # swapping Cellars wholesale
+        # a pathname – either absolute, or relative to the current (Cellar’s parent) directory:
+        cellar_stash = Pathname(annulnil ARGV.value('save-as'))
+        if cellar_stash == ''
+          raise UsageError
+        elsif cellar_stash.exist?
+          raise "#{cellar_stash.realpath}:  Cannot overwrite existing file or directory."
+        end
+        sever_cellar(mode)
         begin
-          new_cellar.rename HOMEBREW_CELLAR
+          HOMEBREW_CELLAR.rename cellar_stash
         rescue
-          HOMEBREW_CELLAR.mkdir
+          unsever_cellar(mode)
           raise RuntimeError
         end
-        unsever_cellar(mode)
-      else
-        HOMEBREW_CELLAR.mkdir
-      end # new cellar
+        # a pathname – either absolute, or relative to the current (Cellar’s parent) directory:
+        new_cellar = Pathname(annulnil ARGV.value('use-new'))
+        if (new_cellar != '' and new_cellar.exist?)
+          begin
+            new_cellar.rename HOMEBREW_CELLAR
+          rescue
+            HOMEBREW_CELLAR.mkdir
+            raise RuntimeError
+          end
+          unsever_cellar(mode)
+        else
+          HOMEBREW_CELLAR.mkdir
+        end # new cellar
+      end # swapping Cellars, not regenerating links in place
     end # cd into HOMEBREW_CELLAR.parent
   end # switch_cellar
 end # module Homebrew
@@ -81,14 +86,18 @@ end # module Homebrew
 #:  brew switch-cellar --save-as=/name to archive current cellar as/
 #:                   [ --use-new=/name of existing stashed cellar/ ]
 #:
-#:This command safely disconnects everything in the currently-active Cellar, and
-#:then renames it to whatever you supplied with “save-as=”.  Once the Cellar has
-#:been safely stored away, the previously‐saved Cellar specified with “use-new=”
-#:is renamed to become the active “Cellar”.  All the expected linkages to it are
-#:restored.  (If you did not specify any replacement Cellar, a new, empty Cellar
-#:will be created for you; obviously, nothing will be linked into it).
+#:  brew switch-cellar --refresh
 #:
-#:Trying to give a whole pathname instead of just a directory name for either of
-#:the parameters will probably fail.  Moving it to or from a different directory
-#:will have to be done as a separate step.
+#:In the first form, this command safely disconnects everything in the currently
+#:active Cellar, and then renames it to whatever you specified under “save-as=”.
+#:Once the thitherto‐active Cellar has been safely stashed away, the previously‐
+#:saved Cellar specified with “use-new=” is renamed, becoming the active Cellar.
+#:All the expected linkages to it are restored.
+#:
+#:(If no replacement Cellar was identified, a new, empty Cellar will be created;
+#:obviously, nothing will be linked into it).
+#:
+#:In the second form, this command safely disconnects and immediately reconnects
+#:everything within the current Cellar.  As a side effect, any and all incorrect
+#:and/or damaged linkages are repaired.
 #:
