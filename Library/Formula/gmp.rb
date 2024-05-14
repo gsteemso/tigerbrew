@@ -69,10 +69,10 @@ class Gmp < Formula
         --prefix=#{prefix}
         --enable-cxx
       ]
-      args << (build.with?('verbose') ? '--disable-silent-rules' : '--enable-silent-rules')
+      args << (ARGV.verbose? ? '--disable-silent-rules' : '--enable-silent-rules')
       args << '--disable-assembly' if Hardware.is_32_bit?
 
-      host_sym = (build.bottle? ? (build.with?('bottle_arch') or Hardware.oldest_cpu) : build_cpu)
+      host_sym = (build.bottle? ? (ARGV.bottle_arch or Hardware.oldest_cpu) : build_cpu)
       if cpu_lookup(host_sym) != cpu_lookup(build_cpu)
         args << "--build=#{cpu_lookup(build_cpu)}-#{tuple_trailer}"
         args << "--host=#{cpu_lookup(host_sym)}-#{tuple_trailer}"
