@@ -59,8 +59,8 @@ class Openssl3 < Formula
         "--openssldir=#{openssldir}",
         arg_format(arch)
       ]
-      # the assembly routines don’t work right on Tiger or on 32-bit PPC
-      configure_args << "no-asm" if (MacOS.version < :leopard or arch == :ppc)
+      # the assembly routines don’t work right on Tiger or on 32-bit G5
+      configure_args << "no-asm" if (MacOS.version < :leopard or (arch == :ppc and sysctl_int("hw.cpusubtype") == 100)
       # No {get,make,set}context support before Leopard
       configure_args << "no-async" if MacOS.version < :leopard
 
