@@ -19,13 +19,15 @@ class GnuTar < Formula
       --disable-dependency-tracking
       --disable-year2038
       --mandir=#{man}
-      --program-prefix=g
     ]
     args << "--with-libiconv-prefix=#{Formula["libiconv"].opt_prefix}" if build.with? "libiconv"
     args << "--program-prefix=g" if build.without? "default-names"
 
     system "./configure", *args
     system "make", "install"
+
+    # Symlink the executable into libexec/gnubin as "tar"
+    (libexec/"gnubin").install_symlink bin/"gtar" => "tar" if build.without? "default-names"
   end
 
   def caveats
@@ -43,7 +45,7 @@ class GnuTar < Formula
   test do
     tar = build.with?("default-names") ? bin/"tar" : bin/"gtar"
     (testpath/"test").write("test")
-    system "gtar", "-czvf", "test.tar.gz", "test"
-    assert_match /test/, shell_output("gtar -xOzf test.tar.gz")
+    system tar, "-czvf", "test.tar.gz", "test"
+    assert_match /test/, shell_output("#{tar} -xOzf test.tar.gz")
   end
 end
