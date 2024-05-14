@@ -56,6 +56,7 @@ class Cunit < Formula
       }
     EOS
 
+    ENV.universal_binary if build.universal?
     system ENV.cc, "test.c", "-L#{lib}", "-lcunit", "-o", "test"
     assert_match "test of 42 ...passed", shell_output("./test")
   end
