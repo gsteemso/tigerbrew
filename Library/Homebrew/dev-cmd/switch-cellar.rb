@@ -23,8 +23,12 @@ module Homebrew
       HOMEBREW_CELLAR.subdirs.each do |rack|
         kegs = rack.subdirs.map { |sd| Keg.new(sd) }
         kegs.each do |keg|
-          keg.link(mode) unless Formulary.from_rack(rack).keg_only?
-          keg.optlink(mode)
+          begin
+            keg.link(mode) unless Formulary.from_rack(rack).keg_only?
+            keg.optlink(mode)
+          rescue FormulaUnavailableError
+            next
+          end
         end # each |keg|
       end # each |rack|
     end # unsever_cellar
