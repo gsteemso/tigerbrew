@@ -24,7 +24,6 @@ class Gettext < Formula
   def install
     ENV.libxml2
 
-<<<<<<< HEAD
     if build.universal?
       ENV.permit_arch_flags
       archs = Hardware::CPU.universal_archs
@@ -77,29 +76,6 @@ class Gettext < Formula
 
     Merge.mach_o(prefix, dirs) if build.universal?
   end # install
-=======
-    system "./configure", "--disable-dependency-tracking",
-                          (ARGV.verbose? ? "--disable-silent-rules" : ""),
-                          "--disable-debug",
-                          "--prefix=#{prefix}",
-                          "--with-included-gettext",
-                          "--with-included-glib",
-                          "--with-included-libcroco",
-                          "--with-included-libunistring",
-                          "--with-emacs",
-                          "--with-lispdir=#{share}/emacs/site-lisp/gettext",
-                          "--disable-java",
-                          "--disable-csharp",
-                          # Don't use VCS systems to create these archives
-                          "--without-git",
-                          "--without-cvs",
-                          "--without-xz"
-    system "make"
-    system "make", "check"
-    ENV.deparallelize # install doesn't support multiple make jobs
-    system "make", "install"
-  end
->>>>>>> 364b89a2ef (Ongoing efforts to unstupid superenv and to add more --universal builds)
 
   test do
     system "#{bin}/gettext", '--version'
@@ -117,9 +93,7 @@ class Merge
       # header word 3, file type:  no types higher than 10 are defined
       # header word 5, net size of load commands, is far smaller than the filesize
       if (self.file? and self.size >= 28 and mach_header = self.binread(24).unpack('N6'))
-        if (mach_header[0] == 0xcafebabe and mach_header[1] > 1 and mach_header[1] < 7)
-          raise("Fat binary found where bare Mach-O file expected:  #{self.to_s}")
-        end
+        raise('Fat binary found where bare Mach-O file expected') if mach_header[0] == 0xcafebabe
         ((mach_header[0] & 0xfffffffe) == 0xfeedface and
           [7, 12, 18].detect { |item| (mach_header[1] & 0x00ffffff) == item } and
           mach_header[3] < 11 and
