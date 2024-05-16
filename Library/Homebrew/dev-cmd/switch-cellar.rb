@@ -1,3 +1,22 @@
+#:Unlink, switch out, and relink your Homebrew (Tigerbrew) Cellar.
+#:
+#:  Usage:
+#:
+#:    brew switch-cellar --save-as=/stash name for current cellar/
+#:                     [ --use-new=/name of existing stashed cellar/ ]
+#:
+#:    brew switch-cellar --refresh
+#:
+#:In the first form, disconnect everything from the currently active Cellar, then
+#:rename it to whatever you specified with “save-as=”.  Once the thitherto‐active
+#:Cellar is safely stashed away, rename whatever you specified with “use-new=” to
+#:become the active Cellar.  All of the expected linkages to it are restored.  If
+#:no replacement Cellar is specified, an empty one is created.
+#:
+#:In the second form, disconnect and then immediately reconnect everything within
+#:the current Cellar.  This repairs any and all incorrect or damaged linkages.
+#:
+
 require 'keg'
 require 'formulary'
 require 'tab'
@@ -10,10 +29,12 @@ module Homebrew
       HOMEBREW_CELLAR.subdirs.each do |rack|
         kegs = rack.subdirs.map { |sd| Keg.new(sd) }
         kegs.each do |keg|
-          keg.unlink(mode) if keg.linked?
           begin 
+            keg.unlink(mode) if keg.linked?
             keg.remove_opt_record unless ARGV.dry_run?
-          rescue
+          rescue FormulaUnavailableError
+            puts "Error unlinking #{keg.name}:  No formula."
+            next
           end
         end # each |keg|
       end # each |rack|
@@ -24,9 +45,10 @@ module Homebrew
         kegs = rack.subdirs.map { |sd| Keg.new(sd) }
         kegs.each do |keg|
           begin
-            keg.link(mode) unless Formulary.from_rack(rack).keg_only?
             keg.optlink(mode)
+            keg.link(mode) unless Formulary.from_rack(rack).keg_only?
           rescue FormulaUnavailableError
+            puts "Error re‐linking #{keg.name}:  No formula."
             next
           end
         end # each |keg|
@@ -57,7 +79,7 @@ module Homebrew
         if cellar_stash == ''
           raise UsageError
         elsif cellar_stash.exist?
-          raise "#{cellar_stash.realpath}:  Cannot overwrite existing file or directory."
+          raise "#{cellar_stash.realpath}:  File or directory already exists."
         end
         sever_cellar(mode)
         begin
@@ -83,25 +105,3 @@ module Homebrew
     end # cd into HOMEBREW_CELLAR.parent
   end # switch_cellar
 end # module Homebrew
-
-# the help text:
-
-#:
-#:  brew switch-cellar --save-as=/name to archive current cellar as/
-#:                   [ --use-new=/name of existing stashed cellar/ ]
-#:
-#:  brew switch-cellar --refresh
-#:
-#:In the first form, this command safely disconnects everything in the currently
-#:active Cellar, and then renames it to whatever you specified under “save-as=”.
-#:Once the thitherto‐active Cellar has been safely stashed away, the previously‐
-#:saved Cellar specified with “use-new=” is renamed, becoming the active Cellar.
-#:All the expected linkages to it are restored.
-#:
-#:(If no replacement Cellar was identified, a new, empty Cellar will be created;
-#:obviously, nothing will be linked into it).
-#:
-#:In the second form, this command safely disconnects and immediately reconnects
-#:everything within the current Cellar.  As a side effect, any and all incorrect
-#:and/or damaged linkages are repaired.
-#:

@@ -1,3 +1,13 @@
+#:List what hardware architectures each given /installed formula/ was brewed for.
+#:The data supplied by the brewing system is uneven, so code made for PowerPCs is
+#:labelled with more specificity than code built for Intel-compatible CPUs.
+#:
+#:  Usage:  brew list-archs /installed formula/ [...]
+#:
+#:The results are shown after a short delay.  (Certain formulae do weird things
+#:which require every last file within each keg to be examined.)
+#:
+
 SIGNATURES = {
   'cafebabe' => :FAT_MAGIC,
   'feedface' => :MH_MAGIC,
@@ -83,7 +93,7 @@ module Term_seq # standard terminal display-control sequences (yes, can be a wro
              #   20 was for Gothic face, and cancelled 3.
   def d_undr ;  '21' ; end # cancels 4; probably unsupported by Terminal.app on Tiger or Leopard.
   def reg_wt ;  '22' ; end # cancels 1-2; probably unsupported by Terminal.app on Tiger or Leopard.
-             #   23 was to return to Roman face (cancelled 3 & 20).
+             #   23 was for returning to Roman face (cancelled 3 & 20).
   def noundr ;  '24' ; end # cancels 4 & 21.
              #   25 cancelled blinking (5-6).
              #   26 was reserved for proportional-width characters.
@@ -332,17 +342,3 @@ module Homebrew
     end # no_archs_msg?
   end # list_archs
 end # Homebrew
-
-# the help text:
-
-#:
-#:  brew list-archs /installed formula/ [...]
-#:
-#:This command lists what hardware architectures each given /installed formula/
-#:was brewed for.  The information supplied by the brewing system is uneven, so
-#:code built for PowerPC CPUs is labelled with more specificity than code built
-#:for Intel-compatible CPUs.
-#:
-#:The results are shown after a short delay.  (Certain formulae do weird things
-#:which require every last file within each keg to be examined.)
-#:
