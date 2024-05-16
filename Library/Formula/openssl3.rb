@@ -38,10 +38,8 @@ class Openssl3 < Formula
       ENV.permit_arch_flags
       archs = Hardware::CPU.universal_archs
       dirs = []
-    elsif MacOS.prefer_64_bit?
-      archs = [Hardware::CPU.arch_64_bit]
     else
-      archs = [Hardware::CPU.arch_32_bit]
+      archs = [MacOS.preferred_arch]
     end
 
     openssldir.mkpath
@@ -49,6 +47,7 @@ class Openssl3 < Formula
     archs.each do |arch|
       if build.universal?
         ENV.append_to_cflags "-arch #{arch}"
+        ENV['HOMEBREW_ARCHFLAGS'] = "-arch #{arch}" if superenv?
         dir = "stash-#{arch}"
         mkdir dir
         dirs << dir
@@ -59,8 +58,8 @@ class Openssl3 < Formula
         "--openssldir=#{openssldir}",
         arg_format(arch)
       ]
-      # the assembly routines don’t work right on Tiger or on 32-bit G5
-      configure_args << "no-asm" if (MacOS.version < :leopard or (arch == :ppc and sysctl_int("hw.cpusubtype") == 100)
+      # the assembly routines don’t work right on Tiger or on PowerPC G5
+      configure_args << "no-asm" if (MacOS.version < :leopard or Hardware::CPU.family == :g5 or Hardware::CPU.family == :g5_64)
       # No {get,make,set}context support before Leopard
       configure_args << "no-async" if MacOS.version < :leopard
 

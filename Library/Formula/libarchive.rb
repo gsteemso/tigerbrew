@@ -13,10 +13,8 @@ class Libarchive < Formula
       ENV.permit_arch_flags
       archs = Hardware::CPU.universal_archs
       dirs = []
-    elsif MacOS.prefer_64_bit?
-      archs = [Hardware::CPU.arch_64_bit]
     else
-      archs = [Hardware::CPU.arch_32_bit]
+      archs = [MacOS.preferred_arch]
     end
 
     archs.each do |arch|

@@ -47,10 +47,8 @@ class Gmp < Formula
       archs = Hardware::CPU.universal_archs
       mkdir 'arch-headers'
       dirs = []
-    elsif MacOS.prefer_64_bit?
-      archs = [Hardware::CPU.arch_64_bit]
     else
-      archs = [Hardware::CPU.arch_32_bit]
+      archs = [MacOS.preferred_arch]
     end
 
     archs.each do |arch|
