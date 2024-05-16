@@ -270,27 +270,25 @@ module Stdenv
   end
 
   def m64
-    un_m32
     append_to_cflags "-m64"
     append "LDFLAGS", "-arch #{Hardware::CPU.arch_64_bit}"
   end
 
   def un_m64
-    remove_from_cflags "-m64"
-    remove "LDFLAGS", "-arch ppc64"
-    remove "LDFLAGS", "-arch x86_64"
+    remove_from_cflags '-m64'
+    remove 'LDFLAGS', '-arch ppc64'
+    remove 'LDFLAGS', '-arch x86_64'
   end
 
   def m32
-    un_m64
     append_to_cflags "-m32"
     append "LDFLAGS", "-arch #{Hardware::CPU.arch_32_bit}"
   end
 
   def un_m32
-    remove_from_cflags "-m32"
-    remove "LDFLAGS", "-arch ppc"
-    remove "LDFLAGS", "-arch i386"
+    remove_from_cflags '-m32'
+    remove 'LDFLAGS', '-arch ppc'
+    remove 'LDFLAGS', '-arch i386'
   end
 
   def universal_binary

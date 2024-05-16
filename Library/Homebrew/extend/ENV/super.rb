@@ -233,17 +233,13 @@ module Superenv
     #   ""
     # ...that "elsewhere" appears to not yet exist, so, optimize here:
     else
-<<<<<<< HEAD
       hw_family = Hardware::CPU.family
-      hw_family = :g5 if hw_family == :g5_64
+      if hw_family == :g5_64
+        hw_family = :g5
+        permit_arch_flags
+        self['HOMEBREW_ARCHFLAGS'] = '-arch ppc64'
+      end
       Hardware::CPU.optimization_flags.fetch(hw_family)
-=======
-      # when building --universal, you get both -arch flags for free; having an extra one can
-      # really ruin your day, so get rid of it
-      target_CPU = Hardware::CPU.family
-      target_CPU = :g5 if ARGV.build_universal? and target_CPU = :g5_64
-      Hardware::CPU.optimization_flags.fetch(target_CPU)
->>>>>>> 364b89a2ef (Ongoing efforts to unstupid superenv and to add more --universal builds)
     end
   end
 
@@ -263,7 +259,7 @@ module Superenv
   # duration of the block and is restored after its completion.
   def deparallelize
     old = self["MAKEFLAGS"]
-    self["MAKEFLAGS"] = self["MAKEFLAGS"].sub(/(-\w*j)\d+/, '\11')
+    self['MAKEFLAGS'] = self['MAKEFLAGS'].sub(/(-\w*j)\d+/, '\11')
     if block_given?
       begin
         yield
@@ -295,44 +291,31 @@ module Superenv
   end
 
   def permit_arch_flags
-    append "HOMEBREW_CCCFG", "K" unless arch_flags_permitted?
-  end
-
-  # @private
-  def arch_flags_permitted?
-    self['HOMEBREW_CCCFG'] =~ /K/
+    append "HOMEBREW_CCCFG", "K" unless self['HOMEBREW_CCCFG'] =~ /K/
   end
 
   def m32
     permit_arch_flags
     append "HOMEBREW_ARCHFLAGS", "-m32"
-    if Hardware::CPU.ppc?
-      append 'HOMEBREW_ARCHFLAGS', '-arch ppc'
-    elsif Hardware::CPU.intel?
-      append 'HOMEBREW_ARCHFLAGS', '-arch i386'
-    end
+    append 'LDFLAGS', "-arch #{Hardware::CPU.arch_32_bit}"
   end
 
   def un_m32
-    remove "HOMEBREW_ARCHFLAGS", "-m32"
-    remove 'HOMEBREW_ARCHFLAGS', '-arch ppc'
-    remove 'HOMEBREW_ARCHFLAGS', '-arch i386'
+    remove 'HOMEBREW_ARCHFLAGS', '-m32'
+    remove ['HOMEBREW_ARCHFLAGS', 'LDFLAGS'], '-arch ppc'
+    remove ['HOMEBREW_ARCHFLAGS', 'LDFLAGS'], '-arch i386'
   end
 
   def m64
     permit_arch_flags
     append "HOMEBREW_ARCHFLAGS", "-m64"
-    if Hardware::CPU.ppc?
-      append 'HOMEBREW_ARCHFLAGS', '-arch ppc64'
-    elsif Hardware::CPU.intel?
-      append 'HOMEBREW_ARCHFLAGS', '-arch x86_64'
-    end
+    append 'LDFLAGS', "-arch #{Hardware::CPU.arch_64_bit}"
   end
 
   def un_m64
-    remove "HOMEBREW_ARCHFLAGS", "-m64"
-    remove 'HOMEBREW_ARCHFLAGS', '-arch ppc64'
-    remove 'HOMEBREW_ARCHFLAGS', '-arch x86_64'
+    remove 'HOMEBREW_ARCHFLAGS', '-m64'
+    remove ['HOMEBREW_ARCHFLAGS', 'LDFLAGS'], '-arch ppc64'
+    remove ['HOMEBREW_ARCHFLAGS', 'LDFLAGS'], '-arch x86_64'
   end
 
   def cxx11
