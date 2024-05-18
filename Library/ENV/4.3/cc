@@ -14,9 +14,9 @@ class Cmd
   attr_reader :config, :prefix, :cellar, :tmpdir, :sysroot
   attr_reader :archflags, :optflags
 
-  def initialize(arg0, args)
+  def initialize(arg0, initial_args)
     @arg0 = arg0
-    @args = args.freeze
+    @instance_args = initial_args.freeze
     @config = ENV.fetch("HOMEBREW_CCCFG") { "" }
     @prefix = ENV["HOMEBREW_PREFIX"]
     @cellar = ENV["HOMEBREW_CELLAR"]
@@ -29,13 +29,13 @@ class Cmd
   def mode
     if @arg0 == "cpp" || @arg0 == "ld"
       @arg0.to_sym
-    elsif @args.include? "-c"
+    elsif @instance_args.include? "-c"
       if @arg0 =~ /(?:c|g|clang)\+\+/
         :cxx
       else
         :cc
       end
-    elsif @args.include? "-E"
+    elsif @instance_args.include? "-E"
       :ccE
     else
       if @arg0 =~ /(?:c|g|clang)\+\+/
@@ -66,43 +66,43 @@ class Cmd
     end
   end
 
-  def args
-    if @args.length == 1 && @args[0] == "-v"
+  def distill_args
+    if @instance_args.length == 1 && @instance_args[0] == "-v"
       # Don't add linker arguments if -v passed as sole option. This stops gcc
       # -v with no other arguments from outputting a linker error. Some
       # software uses gcc -v (wrongly) to sniff the GCC version.
-      return @args.dup
+      return @instance_args.dup
     end
 
     if !refurbish_args? || tool == "ld" || configure?
-      args = @args.dup
+      distilled_args = @instance_args.dup
     else
-      args = refurbished_args
+      distilled_args = refurbished_args
     end
 
     if sysroot
       if tool == "ld"
-        args << "-syslibroot" << sysroot
+        distilled_args << "-syslibroot" << sysroot
       else
-        args << "-isysroot" << sysroot << "--sysroot=#{sysroot}"
+        distilled_args << "-isysroot" << sysroot << "--sysroot=#{sysroot}"
       end
     end
 
     case mode
     when :ccld
-      cflags + args + cppflags + ldflags
+      cflags + distilled_args + cppflags + ldflags
     when :cxxld
-      cxxflags + args + cppflags + ldflags
+      cxxflags + distilled_args + cppflags + ldflags
     when :cc
-      cflags + args + cppflags
+      cflags + distilled_args + cppflags
     when :cxx
-      cxxflags + args + cppflags
+      cxxflags + distilled_args + cppflags
     when :ccE
-      args + cppflags
+      distilled_args + cppflags
     when :cpp
-      args + cppflags
+      distilled_args + cppflags
     when :ld
-      ldflags + args
+      ldflags + distilled_args
     end
   end
 
@@ -110,35 +110,35 @@ class Cmd
     @lset = Set.new(library_paths + system_library_paths)
     @iset = Set.new(isystem_paths + include_paths)
 
-    args = []
-    enum = @args.each
+    refurbed_args = []
+    enum = @instance_args.each
 
     loop do
       case arg = enum.next
       when "-arch"
         if permit_arch_flags?
-          args << arg << enum.next
+          refurbed_args << arg << enum.next
         else
           enum.next
         end
       when "-m32", "-m64"
-        args << arg if permit_arch_flags?
+        refurbed_args << arg if permit_arch_flags?
       when /^-Xarch_/
         refurbished = refurbish_arg(enum.next, enum)
         unless refurbished.empty?
-          args << arg
-          args += refurbished
+          refurbed_args << arg
+          refurbed_args += refurbished
         end
       else
-        args += refurbish_arg(arg, enum)
+        refurbed_args += refurbish_arg(arg, enum)
       end
     end
 
-    args
+    refurbed_args
   end
 
   def refurbish_arg(arg, enum)
-    args = []
+    refurb_arg_parts = []
 
     case arg
     when /^-g\d?/, /^-gstabs\d+/, "-gstabs+", /^-ggdb\d?/, "-gdwarf-2",
@@ -147,7 +147,7 @@ class Cmd
       "-pedantic", "-pedantic-errors", "-Wno-long-double",
       "-Wno-unused-but-set-variable"
     when "-Wno-unneeded-internal-declaration"
-      args << arg if tool =~ /clang/
+      refurb_arg_parts << arg if tool =~ /clang/
     when "-fopenmp", "-lgomp", "-mno-fused-madd", "-fforce-addr", "-fno-defer-pop",
       "-mno-dynamic-no-pic", "-fearly-inlining", /^-f(?:no-)?inline-functions-called-once/,
       /^-finline-limit/, /^-f(?:no-)?check-new/, "-fno-delete-null-pointer-checks",
@@ -156,39 +156,39 @@ class Cmd
       "-fno-regmove", "-fno-for-scope", "-fno-tree-pre", "-fno-tree-dominator-opts",
       "-fuse-linker-plugin"
       # clang doesn't support these flags
-      args << arg unless tool =~ /^clang/
+      refurb_arg_parts << arg unless tool =~ /^clang/
     when "-Wno-deprecated-register", "-Wno-implicit-fallthrough"
       # older gccs don't support these flags
-      args << arg unless tool =~ /^g..-4.[02]/
+      refurb_arg_parts << arg unless tool =~ /^g..-4.[02]/
     when /^-W[alp],/, /^-Wno-/
-      args << arg
+      refurb_arg_parts << arg
     when /^-W.*/
       # prune warnings
     when "-macosx_version_min", "-dylib_install_name"
-      args << "-Wl,#{arg},#{enum.next}"
+      refurb_arg_parts << "-Wl,#{arg},#{enum.next}"
     when "-multiply_definedsuppress"
-      args << "-Wl,-multiply_defined,suppress"
+      refurb_arg_parts << "-Wl,-multiply_defined,suppress"
     when "-undefineddynamic_lookup"
-      args << "-Wl,-undefined,dynamic_lookup"
+      refurb_arg_parts << "-Wl,-undefined,dynamic_lookup"
     when /^-isysroot/, /^--sysroot/
       # We set the sysroot
       enum.next
     when "-dylib"
-      args << "-Wl,#{arg}"
+      refurb_arg_parts << "-Wl,#{arg}"
     when /^-I(.+)?/
       # Support both "-Ifoo" (one argument) and "-I foo" (two arguments)
       val  = chuzzle($1) || enum.next
       path = canonical_path(val)
-      args << "-I#{val}" if keep?(path) && @iset.add?(path)
+      refurb_arg_parts << "-I#{val}" if keep?(path) && @iset.add?(path)
     when /^-L(.+)?/
       val  = chuzzle($1) || enum.next
       path = canonical_path(val)
-      args << "-L#{val}" if keep?(path) && @lset.add?(path)
+      refurb_arg_parts << "-L#{val}" if keep?(path) && @lset.add?(path)
     else
-      args << arg
+      refurb_arg_parts << arg
     end
 
-    args
+    refurb_arg_parts
   end
 
   def keep?(path)
@@ -196,25 +196,25 @@ class Cmd
   end
 
   def cflags
-    args = []
+    cflag_args = []
 
-    return args unless refurbish_args? || configure?
+    return cflag_args unless refurbish_args? || configure?
 
-    args << "-pipe"
-    args << "-w" unless configure?
-    args << "-#{ENV["HOMEBREW_OPTIMIZATION_LEVEL"]}"
-    args.concat(optflags)
-    args.concat(archflags)
-    args << "-std=#{@arg0}" if @arg0 =~ /c[89]9/
-    args
+    cflag_args << "-pipe"
+    cflag_args << "-w" unless configure?
+    cflag_args << "-#{ENV["HOMEBREW_OPTIMIZATION_LEVEL"]}"
+    cflag_args.concat(optflags)
+    cflag_args.concat(archflags)
+    cflag_args << "-std=#{@arg0}" if @arg0 =~ /c[89]9/
+    cflag_args
   end
 
   def cxxflags
-    args = cflags
-    args << "-std=c++11" if cxx11?
-    args << "-stdlib=libc++" if libcxx?
-    args << "-stdlib=libstdc++" if libstdcxx?
-    args
+    cxxflag_args = cflags
+    cxxflag_args << "-std=c++11" if cxx11?
+    cxxflag_args << "-stdlib=libc++" if libcxx?
+    cxxflag_args << "-stdlib=libstdc++" if libstdcxx?
+    cxxflag_args
   end
 
   def cppflags
@@ -222,14 +222,14 @@ class Cmd
   end
 
   def ldflags
-    args = path_flags("-L", library_paths)
+    ldflag_args = path_flags("-L", library_paths)
     case mode
     when :ld
-      args << "-headerpad_max_install_names"
+      ldflag_args << "-headerpad_max_install_names"
     when :ccld, :cxxld
-      args << "-Wl,-headerpad_max_install_names"
+      ldflag_args << "-Wl,-headerpad_max_install_names"
     end
-    args
+    ldflag_args
   end
 
   def isystem_paths
@@ -295,17 +295,17 @@ class Cmd
   end
 end
 
-def log(basename, argv, tool, args)
+def log(basename, argv, tool, net_args)
   return unless ENV.key?("HOMEBREW_CC_LOG_PATH")
 
-  adds = args - argv
-  dels = argv - args
+  adds = net_args - argv
+  dels = argv - net_args
 
   s = ""
   s << "#{basename} called with: #{argv.join(" ")}\n"
   s << "superenv removed:  #{dels.join(" ")}\n" unless dels.empty?
   s << "superenv added:    #{adds.join(" ")}\n" unless adds.empty?
-  s << "superenv executed: #{tool} #{args.join(" ")}\n\n"
+  s << "superenv executed: #{tool} #{net_args.join(" ")}\n\n"
   File.open("#{ENV["HOMEBREW_CC_LOG_PATH"]}.cc", "a+") { |f| f.write(s) }
 end
 
@@ -324,10 +324,10 @@ if __FILE__ == $PROGRAM_NAME
 
   cmd = Cmd.new(basename, ARGV)
   tool = cmd.tool
-  args = cmd.args
+  global_args = cmd.distill_args
 
-  log(basename, ARGV, tool, args)
+  log(basename, ARGV, tool, global_args)
 
-  args << { :close_others => false } if RUBY_VERSION >= "2.0"
-  exec "#{dirname}/xcrun", tool, *args
+  global_args << { :close_others => false } if RUBY_VERSION >= "2.0"
+  exec "#{dirname}/xcrun", tool, *global_args
 end
