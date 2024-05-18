@@ -9,7 +9,7 @@ class Pcre2 < Formula
 
     depends_on "autoconf" => :build
     depends_on "automake" => :build
-    depends_on "libtool" => :build
+    depends_on "libtool"  => :build
   end
 
   option :universal
@@ -21,9 +21,6 @@ class Pcre2 < Formula
    sha256 "abbf0ece0c75581d653d4556eee4c5d27ef4505a8a6298f79c7f87f4a72da49d"
   end
 
-  # Fix thread support – uncertain if actually needed but other distros use it
-  patch :p0, :DATA
-
   def install
     ENV.universal_binary if build.universal?
     ENV.deparallelize
@@ -31,8 +28,8 @@ class Pcre2 < Formula
     system "./autogen.sh" if build.head?
 
     args = %W[
-      --prefix=#{prefix}
       --disable-dependency-tracking
+      --prefix=#{prefix}
       --enable-pcre2-16
       --enable-pcre2-32
       --enable-pcre2grep-libz
@@ -54,18 +51,3 @@ class Pcre2 < Formula
     system bin/"pcre2grep", "regular expression", share/"doc/pcre2/README"
   end
 end
-
-__END__
---- configure.orig
-+++ configure
-@@ -15818,10 +15818,6 @@
- 
-         ax_pthread_flags="-pthreads pthread -mt -pthread $ax_pthread_flags"
-         ;;
--
--        darwin*)
--        ax_pthread_flags="-pthread $ax_pthread_flags"
--        ;;
- esac
- 
- if test x"$ax_pthread_ok" = xno; then
