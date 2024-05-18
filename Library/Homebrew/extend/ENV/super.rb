@@ -58,7 +58,7 @@ module Superenv
     self["HOMEBREW_TEMP"] = HOMEBREW_TEMP.to_s
     self["HOMEBREW_SDKROOT"] = effective_sysroot
     self["HOMEBREW_OPTFLAGS"] = determine_optflags
-    self["HOMEBREW_ARCHFLAGS"] = ""
+    self["HOMEBREW_ARCHFLAGS"] ||= ""
     self["CMAKE_PREFIX_PATH"] = determine_cmake_prefix_path
     self["CMAKE_FRAMEWORK_PATH"] = determine_cmake_frameworks_path
     self["CMAKE_INCLUDE_PATH"] = determine_cmake_include_path
@@ -222,6 +222,9 @@ module Superenv
       arch = ARGV.bottle_arch || Hardware.oldest_cpu
       Hardware::CPU.optimization_flags.fetch(arch)
     elsif Hardware::CPU.intel? && !Hardware::CPU.sse4?
+      # If the CPU doesn't support SSE4, we cannot trust -march=native or
+      # -march=<cpu family> to do the right thing because we might be running
+      # in a VM or on a Hackintosh.
       Hardware::CPU.optimization_flags.fetch(Hardware.oldest_cpu)
     elsif compiler == :clang
       "-march=native"
@@ -230,11 +233,13 @@ module Superenv
     #   ""
     # ...that "elsewhere" appears to not yet exist, so, optimize here:
     else
-      native_CPU = Hardware::CPU.family
-      # -arch flags, when not being filtered out, belong in ENV['HOMEBREW_ARCHFLAGS']; things can
-      # get messed up if they also appear in ENV['HOMEBREW_OPTFLAGS'], so prevent that:
-      native_CPU = :g5 if arch_flags_permitted? and native_CPU == :g5_64
-      Hardware::CPU.optimization_flags.fetch(native_CPU)
+      hw_family = Hardware::CPU.family
+      if hw_family == :g5_64
+        hw_family = :g5
+        permit_arch_flags
+        self['HOMEBREW_ARCHFLAGS'] = '-arch ppc64'
+      end
+      Hardware::CPU.optimization_flags.fetch(hw_family)
     end
   end
 
@@ -249,12 +254,11 @@ module Superenv
 
   public
 
-  # Changes the MAKEFLAGS environment variable, causing make to use a single job.
+  # Removes the MAKEFLAGS environment variable, causing make to use a single job.
   # This is useful for makefiles with race conditions.
-  # When passed a block, MAKEFLAGS is altered only for the duration of the block and is restored after its completion.
+  # When passed a block, MAKEFLAGS is removed only for the duration of the block and is restored after its completion.
   def deparallelize
-    old = self["MAKEFLAGS"]
-    self["MAKEFLAGS"] = self["MAKEFLAGS"].sub(/(-\w*j)\d+/, "\\11")
+    old = delete("MAKEFLAGS")
     if block_given?
       begin
         yield
@@ -286,30 +290,31 @@ module Superenv
   end
 
   def permit_arch_flags
-    append "HOMEBREW_CCCFG", "K" unless arch_flags_permitted?
-  end
-
-  # @private
-  def arch_flags_permitted?
-    self['HOMEBREW_CCCFG'] =~ /K/
+    append "HOMEBREW_CCCFG", "K" unless self['HOMEBREW_CCCFG'].include? 'K'
   end
 
   def m32
     permit_arch_flags
     append "HOMEBREW_ARCHFLAGS", "-m32"
+    append 'LDFLAGS', "-arch #{Hardware::CPU.arch_32_bit}"
   end
 
   def un_m32
-    remove "HOMEBREW_ARCHFLAGS", "-m32"
+    remove 'HOMEBREW_ARCHFLAGS', '-m32'
+    remove ['HOMEBREW_ARCHFLAGS', 'LDFLAGS'], '-arch ppc'
+    remove ['HOMEBREW_ARCHFLAGS', 'LDFLAGS'], '-arch i386'
   end
 
   def m64
     permit_arch_flags
     append "HOMEBREW_ARCHFLAGS", "-m64"
+    append 'LDFLAGS', "-arch #{Hardware::CPU.arch_64_bit}"
   end
 
   def un_m64
-    remove "HOMEBREW_ARCHFLAGS", "-m64"
+    remove 'HOMEBREW_ARCHFLAGS', '-m64'
+    remove ['HOMEBREW_ARCHFLAGS', 'LDFLAGS'], '-arch ppc64'
+    remove ['HOMEBREW_ARCHFLAGS', 'LDFLAGS'], '-arch x86_64'
   end
 
   def cxx11
