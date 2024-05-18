@@ -33,10 +33,10 @@ class Brotli < Formula
 
   def caveats
     <<-_.undent
-      if Python 3 is installed, brotli bindings for it are available via Pip:
+      Brotli bindings for Python 3 are available via Pip:
         pip3 install brotli
     _
-  end
+  end if Formula['python3'].installed?
 
   test do
     system bin/'brotli', '-k', '-o', './brotliest.br', bin/'brotli'
