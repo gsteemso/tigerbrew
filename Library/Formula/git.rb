@@ -96,8 +96,6 @@ class Git < Formula
       ENV["LIBPCREDIR"] = Formula["pcre2"].opt_prefix
     end
 
-    ENV["NO_GETTEXT"] = "1" if build.without? "gettext"
-
     args = %W[
       prefix=#{prefix}
       sysconfdir=#{etc}
@@ -154,10 +152,6 @@ class Git < Formula
     chmod 0644, Dir["#{share}/doc/git-doc/**/*.{html,txt}"]
     chmod 0755, Dir["#{share}/doc/git-doc/{RelNotes,howto,technical}"]
 
-    # To avoid this feature hooking into the system OpenSSL, remove it.
-    # If you need it, install git --with-brewed-openssl.
-    rm "#{libexec}/git-core/git-imap-send" if build.without? "brewed-openssl"
-
     # Set the macOS keychain credential helper by default
     # (as Apple's CLT's git also does this).
     (buildpath/"gitconfig").write <<-EOS.undent
@@ -192,6 +186,7 @@ class Git < Formula
   # since newer implementations were based on AES cipher.
   patch :p0, :DATA
 end
+
 __END__
 --- sha1dc/sha1.c.orig	2023-04-08 03:00:31.000000000 +0000
 +++ sha1dc/sha1.c
