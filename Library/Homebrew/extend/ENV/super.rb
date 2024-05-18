@@ -58,7 +58,7 @@ module Superenv
     self["HOMEBREW_TEMP"] = HOMEBREW_TEMP.to_s
     self["HOMEBREW_SDKROOT"] = effective_sysroot
     self["HOMEBREW_OPTFLAGS"] = determine_optflags
-    self["HOMEBREW_ARCHFLAGS"] = ""
+    self["HOMEBREW_ARCHFLAGS"] ||= ""
     self["CMAKE_PREFIX_PATH"] = determine_cmake_prefix_path
     self["CMAKE_FRAMEWORK_PATH"] = determine_cmake_frameworks_path
     self["CMAKE_INCLUDE_PATH"] = determine_cmake_include_path
@@ -291,7 +291,7 @@ module Superenv
   end
 
   def permit_arch_flags
-    append "HOMEBREW_CCCFG", "K" unless self['HOMEBREW_CCCFG'] =~ /K/
+    append "HOMEBREW_CCCFG", "K" unless self['HOMEBREW_CCCFG'].include? 'K'
   end
 
   def m32
