@@ -24,7 +24,7 @@ class Zstd < Formula
     # For some reason, type `long long` is not understood unless this is made explicit:
     ENV.append_to_cflags '-std=c99'
     if build.universal?
-      ENV.permit_arch_flags
+      ENV.permit_arch_flags if superenv?
       ENV.un_m64 if Hardware::CPU.family == :g5_64
       archs = Hardware::CPU.universal_archs
       dirs = []

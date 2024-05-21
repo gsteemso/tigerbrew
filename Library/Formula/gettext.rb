@@ -25,7 +25,7 @@ class Gettext < Formula
     ENV.libxml2
 
     if build.universal?
-      ENV.permit_arch_flags
+      ENV.permit_arch_flags if superenv?
       archs = Hardware::CPU.universal_archs
       dirs = []
     else

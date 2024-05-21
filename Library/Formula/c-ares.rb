@@ -18,7 +18,7 @@ class CAres < Formula
 
   def install
     if build.universal?
-      ENV.permit_arch_flags
+      ENV.permit_arch_flags if superenv?
       archs = Hardware::CPU.universal_archs
       mkdir 'arch-headers'
       dirs = []
