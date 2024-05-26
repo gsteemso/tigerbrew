@@ -28,7 +28,7 @@ class Perl < Formula
     end # universal?
     archs.each do |arch|
       ENV.append_to_cflags "-arch #{arch}"
-      bitness = Hardware::CPUs.bits
+      bitness = Hardware::CPU.bits
       if build.universal?
         dir = "stash-#{arch}"
         mkdir dir
@@ -39,14 +39,14 @@ class Perl < Formula
         -Dprefix=#{prefix}
         -Uvendorprefix=
         -Dprivlib=#{lib}
-        -Darchlib=#{lib}/darwin-thread-multi-ld-2level-#{bitness}
+        -Darchlib=#{lib}
         -Dman1dir=#{man1}
         -Dman3dir=#{man3}
         -Dman3ext=3pl
         -Dhtml1dir=#{doc}/html
         -Dhtml3dir=#{doc}/modules/html
         -Dsitelib=#{lib}/site_perl
-        -Dsitearch=#{lib}/site_perl/darwin-thread-multi-ld-2level-#{bitness}
+        -Dsitearch=#{lib}/site_perl
         -Dsiteman1dir=#{man1}
         -Dsiteman3dir=#{man3}
         -Dsitehtml1dir=#{doc}/html
@@ -96,8 +96,8 @@ class Perl < Formula
   # lib/ExtUtils/MM_Darwin.pm: Unbreak Perl build
   # https://github.com/Perl-Toolchain-Gang/ExtUtils-MakeMaker/pull/444/files
   # t/04-xs-rpath-darwin.t: Need Darwin 9 minimum
-  # undocumented, same file: Dummy library build needs to match Perl build, especially on 64-bit
   # https://github.com/Perl-Toolchain-Gang/ExtUtils-MakeMaker/pull/446
+  # undocumented, same file: Dummy library build needs to match Perl build, especially on 64-bit
   # -rpath wont work when targeting 10.3 on 10.5
   # https://github.com/Perl/perl5/pull/21367
   patch :p0, :DATA
