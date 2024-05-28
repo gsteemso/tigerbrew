@@ -15,10 +15,15 @@ class Perl < Formula
 
   option :universal
   option "with-dtrace", "Build with DTrace probes" if MacOS.version >= :leopard
-  option "with-tests", "Run the build-test suite (expect 1 test file to partly fail on 64-bit PowerPC)"
+  option "with-tests", "Run the build-test suite"
 
   def install
-    ENV.permit_arch_flags if superenv?
+    # Kernel.system but ignoring exceptions
+    def oblivious_system(cmd, *args)
+      Homebrew.system(cmd, *args)
+    rescue
+      # do nothing
+    end
     ENV.un_m64 if Hardware::CPU.family == :g5_64
     if build.universal?
       archs = Hardware::CPU.universal_archs
@@ -27,8 +32,10 @@ class Perl < Formula
       archs = [MacOS.preferred_arch]
     end # universal?
     archs.each do |arch|
-      ENV.append_to_cflags "-arch #{arch}"
-      bitness = Hardware::CPU.bits
+      case arch
+        when :ppc, :i386 then bitness = 32; ENV.m32
+        when :ppc64, :x86_64 then bitness = 64; ENV.m64
+      end
       if build.universal?
         dir = "stash-#{arch}"
         mkdir dir
@@ -43,47 +50,62 @@ class Perl < Formula
         -Dman1dir=#{man1}
         -Dman3dir=#{man3}
         -Dman3ext=3pl
-        -Dhtml1dir=#{doc}/html
-        -Dhtml3dir=#{doc}/modules/html
         -Dsitelib=#{lib}/site_perl
         -Dsitearch=#{lib}/site_perl
         -Dsiteman1dir=#{man1}
         -Dsiteman3dir=#{man3}
-        -Dsitehtml1dir=#{doc}/html
-        -Dsitehtml3dir=#{doc}/modules/html
         -Dperladmin=none
-        -Dstartperl=\#!#{opt_bin}/perl
+        -Dstartperl='\#!#{opt_bin}/perl'
         -Duseshrplib
         -Duselargefiles
         -Dusenm
         -Dusethreads
-        -Acppflags=#{ENV.cppflags}
-        -Accflags=#{ENV.cflags}
-        -Alddlflags=#{ENV.ldflags}
-        -Aldflags=#{ENV.ldflags}
+        -Acppflags=-m#{bitness}
       ]
       args << '-Duse64bitall' if bitness == 64
       args << "-Dusedtrace" if build.with? "dtrace"
       args << "-Dusedevel" if build.head?
       system "./Configure", *args
       system "make"
-      system "make", "test" if build.with?("tests") || build.bottle?
+      if build.with?("tests") || build.bottle?
+        # - Set CFLAGS for the tests, so that the patch I added to make a dummy library be built
+        #   with the same bitness as perl will definitely work.
+        # - The tests produce one known failure on ppc64, but when nothing else goes wrong, we
+        #   don't want the whole build to fail; so ignore errors.  On any other architecture, we
+        #   still want errors to be fatal.
+        if arch == :ppc64
+          oblivious_system 'make', 'test', 'CFLAGS=-m64'
+        else
+          system 'make', 'test', "CFLAGS=-m#{bitness}"
+        end
+      end
       system "make", "install"
       if build.universal?
-        system 'make', 'distclean'
+        ENV.deparallelize { system 'make', 'distclean' }
         Merge.scour_keg(prefix, dir)
-        # undo architecture-specific tweak before next run
-        ENV.remove_from_cflags "-arch #{arch}"
+        # undo architecture-specific tweaks before next run
+        case bitness
+          when 32 then ENV.un_m32
+          when 64 then ENV.un_m64
+        end
       end # universal?
     end # each |arch|
     Merge.mach_o(prefix, dirs) if build.universal?
   end
 
-  def caveats; <<-EOS.undent
-    By default Perl installs modules in your HOME dir. If this is an issue run:
-      `#{bin}/cpan o conf init`
-    and tell it to put them in, for example, #{opt_lib}/site_perl instead.
+  def caveats
+    the_text = <<-EOS.undent
+      By default Perl installs modules in your HOME dir. If this is an issue run:
+        `#{bin}/cpan o conf init`
+      and tell it to put them in, for example, #{opt_lib}/site_perl instead.
     EOS
+    the_text += <<-_.undent if (build.with?('tests') and (Hardware::CPU.family == :g5_64 or (build.universal? and Hardware::CPU.ppc?)))
+      Perl is known to fail one test (t/io/sem) when built for 64-bit PowerPC.  This
+      failure, being expected, is ignored.  However, any other errors that may occur
+      also get ignored.  You must check the test summary produced during compilation
+      to verify that no other failures took place.
+    _
+    the_text
   end
 
   test do
@@ -209,9 +231,9 @@ __END__
 -}
 -
  1;
---- dist/ExtUtils-CBuilder/lib/ExtUtils/CBuilder/Platform/darwin.pm.orig	2023-03-02 11:53:46.000000000 +0000
-+++ dist/ExtUtils-CBuilder/lib/ExtUtils/CBuilder/Platform/darwin.pm	2023-05-21 05:18:00.000000000 +0100
-@@ -16,9 +16,6 @@
+--- dist/ExtUtils-CBuilder/lib/ExtUtils/CBuilder/Platform/darwin.pm.orig    2023-03-02 11:53:46.000000000 +0000
++++ dist/ExtUtils-CBuilder/lib/ExtUtils/CBuilder/Platform/darwin.pm         2023-05-21 05:18:00.000000000 +0100
+@@ -20,9 +20,6 @@
    local $cf->{ccflags} = $cf->{ccflags};
    $cf->{ccflags} =~ s/-flat_namespace//;
  
