@@ -10,11 +10,13 @@ class Automake < Formula
     sha256 "8b0b74e874319bca40c049d01e0816845dfedae4a4607ee5cd91f23170f94996" => :tiger_altivec
   end
 
-  depends_on "autoconf" => :run
+  depends_on "autoconf"
 
   keg_only :provided_until_xcode43
 
   def install
+    # for some reason, this gets set to the stock (system) version of M4, causing immediate failure
+    ENV.delete 'M4'
     ENV["PERL"] = "/usr/bin/perl"
 
     system "./configure", "--prefix=#{prefix}"
