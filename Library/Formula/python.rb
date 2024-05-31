@@ -3,7 +3,7 @@ class Python < Formula
   homepage "https://www.python.org"
   url "https://www.python.org/ftp/python/2.7.18/Python-2.7.18.tar.xz"
   sha256 "b62c0e7937551d0cc02b8fd5cb0f544f9405bafc9a54d3808ed4594812edef43"
-  head "https://github.com/python/cpython.git", :branch => "2.7"
+  # as Python 2.7 development halted years ago, the :HEAD version is no longer available
   revision 1
 
   bottle do
@@ -85,6 +85,72 @@ class Python < Formula
     satisfy { MacOS::CLT.installed? }
   end
 
+  module Pathname_extension
+    def is_fat_binary?
+      # header 32‐bit word 0, magic signature:  FAT_MAGIC = 0xcafebabe
+      # header word 1, number n of Mach-O sub‐binaries:  2 to 4, but allow up to 6 just in case
+      # header words 2 + (0..(n – 1)) * 5: CPU types:  7 is x86, 12 is ARM, 18 is PPC
+      # (each sub‐binary has a 7‐ or 8‐word header)
+      if (self.file? and self.size >= 104 and fat_header = self.binread(32).unpack('N8'))
+        (fat_header[0]  == 0xcafebabe and
+         fat_header[1] >= 2 and fat_header[1] <= 6 and
+         [7, 12, 18].detect { |item| (fat_header[2] & 0x00ffffff) == item } and
+         [7, 12, 18].detect { |item| (fat_header[7] & 0x00ffffff) == item })
+      else
+        false
+      end
+    end unless method_defined?(:is_fat_binary?)
+
+    def ppc_archs
+      # it has already been established that self is a valid fat file with 2-6 members
+      ppc32_found = ppc64_found = false
+      archs = []
+      n = self.binread(4, 4).unpack('N1').first - 1
+      for i in 0..n
+        cpu_type = self.binread(4, 8 + 20 * i).unpack('N1').first
+        if cpu_type & 0x00ffffff == 18
+          if cpu_type & 0xff000000 == 0
+            ppc32_found = true
+          else
+            ppc64_found = true
+          end
+        end
+      end
+      archs << 'ppc' if ppc32_found
+      archs << 'ppc64' if ppc64_found
+      archs
+    end unless method_defined?(:ppc_archs)
+  end # Pathname_extension
+
+  def purge_keg(lipo = which('lipo'), sub_path = '')
+    # don’t suffer a double slash when sub_path is null:
+    s_p = (sub_path == '' ? '' : sub_path + '/')
+    Dir["#{prefix}/#{s_p}*"].each do |f|
+      pn = Pathname(f).extend(Pathname_extension)
+      if pn.directory?
+        purge_keg(lipo, s_p + pn.basename)
+      # the number of things that look like fat binaries but aren’t is horrifying, so test:
+      elsif ((not pn.symlink?) and pn.is_fat_binary?)
+        ppc_archs = pn.ppc_archs
+        part_names = []
+        ppc_archs.each do |a|
+          part_name = "#{pn.to_s}.#{a}"
+          system lipo, pn, '-extract_family', a, '-output', part_name
+          part_names << part_name
+        end
+        pn.delete
+        if part_names.length > 1
+          system lipo, '-create', *part_names, '-output', pn
+          File.delete *part_names
+        elsif part_names.length == 1
+          File.rename(part_names.first, pn.to_s)
+        else
+          raise "#{pn.to_s} contained no PowerPC code at all!"
+        end
+      end
+    end
+  end # purge_keg
+
   def install
     # Unset these so that installing pip and setuptools puts them where we want
     # and not into some other Python the user has installed.
@@ -131,16 +197,18 @@ class Python < Formula
 
     if build.universal?
       ENV.permit_arch_flags
-      # a universal build of Python is done by the Python build scripts, not by Tigerbrew, and on
-      # PPC involves cross-compiling.  All traces of customization to a PowerPC CPU must be removed
-      # or the compiler will choke when building for other architectures.
+      args << "--enable-universalsdk=/"
       if Hardware::CPU.ppc?
-        if superenv?
-          ENV['HOMEBREW_OPTFLAGS'] = ''
-        # add an else clause if it doesn’t build correctly under stdenv
-        end
+        # a universal build of Python is done by the Python build scripts, not by Tigerbrew, and on
+        # PPC includes cross-compilation for i386 and x86_64.  All traces of customization to a
+        # PowerPC CPU must be removed or the compiler will choke when building for the other two
+        # architectures.
+        ENV['HOMEBREW_OPTFLAGS'] = '' if superenv?
+        # Add an appropriate else clause if it doesn’t build correctly under stdenv.
+        args << '--with-universal-archs=all'
+      else
+        args << '--with-universal-archs=intel'
       end
-      args << "--enable-universalsdk=/" << "--with-universal-archs=#{Hardware::CPU.intel? ? 'intel' : 'all'}"
     end
 
     if build.with? "sqlite"
@@ -148,7 +216,6 @@ class Python < Formula
         s.gsub! "sqlite_setup_debug = False", "sqlite_setup_debug = True"
         s.gsub! "for d_ in inc_dirs + sqlite_inc_paths:",
                 "for d_ in ['#{Formula["sqlite"].opt_include}']:"
-
         # Allow sqlite3 module to load extensions:
         # https://docs.python.org/library/sqlite3.html#f1
         s.gsub! 'sqlite_defines.append(("SQLITE_OMIT_LOAD_EXTENSION", "1"))', ""
@@ -175,12 +242,14 @@ class Python < Formula
 
     system "./configure", *args
     system "make"
-
     ENV.deparallelize do
       # Tell Python not to install into /Applications
       system "make", "install", "PYTHONAPPSDIR=#{prefix}"
       system "make", "frameworkinstallextras", "PYTHONAPPSDIR=#{pkgshare}"
     end
+
+    # when applicable, remove all non‐PowerPC sub‐binaries to avoid link errors later on
+    purge_keg if (build.universal? and Hardware::CPU.ppc?)
 
     # Fixes setting Python build flags for certain software
     # See: https://github.com/Homebrew/homebrew/pull/20182

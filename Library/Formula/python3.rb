@@ -52,6 +52,72 @@ class Python3 < Formula
     MacOS::CLT.installed?
   end
 
+  module Pathname_extension
+    def is_fat_binary?
+      # header 32‐bit word 0, magic signature:  FAT_MAGIC = 0xcafebabe
+      # header word 1, number n of Mach-O sub‐binaries:  2 to 4, but allow up to 6 just in case
+      # header words 2 + (0..(n – 1)) * 5: CPU types:  7 is x86, 12 is ARM, 18 is PPC
+      # (each sub‐binary has a 7‐ or 8‐word header)
+      if (self.file? and self.size >= 104 and fat_header = self.binread(32).unpack('N8'))
+        (fat_header[0]  == 0xcafebabe and
+         fat_header[1] >= 2 and fat_header[1] <= 6 and
+         [7, 12, 18].detect { |item| (fat_header[2] & 0x00ffffff) == item } and
+         [7, 12, 18].detect { |item| (fat_header[7] & 0x00ffffff) == item })
+      else
+        false
+      end
+    end unless method_defined?(:is_fat_binary?)
+
+    def ppc_archs
+      # it has already been established that self is a valid fat file with 2-6 members
+      ppc32_found = ppc64_found = false
+      archs = []
+      n = self.binread(4, 4).unpack('N1').first - 1
+      for i in 0..n
+        cpu_type = self.binread(4, 8 + 20 * i).unpack('N1').first
+        if cpu_type & 0x00ffffff == 18
+          if cpu_type & 0xff000000 == 0
+            ppc32_found = true
+          else
+            ppc64_found = true
+          end
+        end
+      end
+      archs << 'ppc' if ppc32_found
+      archs << 'ppc64' if ppc64_found
+      archs
+    end unless method_defined?(:ppc_archs)
+  end # Pathname_extension
+
+  def purge_keg(lipo = which('lipo'), sub_path = '')
+    # don’t suffer a double slash when sub_path is null:
+    s_p = (sub_path == '' ? '' : sub_path + '/')
+    Dir["#{prefix}/#{s_p}*"].each do |f|
+      pn = Pathname(f).extend(Pathname_extension)
+      if pn.directory?
+        purge_keg(lipo, s_p + pn.basename)
+      # the number of things that look like fat binaries but aren’t is horrifying, so test:
+      elsif ((not pn.symlink?) and pn.is_fat_binary?)
+        ppc_archs = pn.ppc_archs
+        part_names = []
+        ppc_archs.each do |a|
+          part_name = "#{pn.to_s}.#{a}"
+          system lipo, pn, '-extract_family', a, '-output', part_name
+          part_names << part_name
+        end
+        pn.delete
+        if part_names.length > 1
+          system lipo, '-create', *part_names, '-output', pn
+          File.delete *part_names
+        elsif part_names.length == 1
+          File.rename(part_names.first, pn.to_s)
+        else
+          raise "#{pn.to_s} contained no PowerPC code at all!"
+        end
+      end
+    end
+  end # purge_keg
+
   def install
     # Unset these so that installing pip and setuptools puts them where we want
     # and not into some other Python the user has installed.
@@ -103,19 +169,21 @@ class Python3 < Formula
 
     if build.universal?
       ENV.permit_arch_flags
-      if superenv?
-        ENV['HOMEBREW_OPTFLAGS'] = ''
-      # may need an else clause if it doesn’t build properly under stdenv
-      end
-      if Hardware::CPU.intel?
-        args << "--enable-universalsdk" << "--with-universal-archs=intel"
-        args << 'ax_cv_c_float_words_bigendian=no'
-      elsif Hardware::CPU.ppc?
-        args << "--enable-universalsdk" << "--with-universal-archs=all"
-        # with a four-architecture build, gettext won’t link correctly as it lacks x86 code
+      args << "--enable-universalsdk"
+      if Hardware::CPU.ppc?
+        # a universal build of Python is done by the Python build scripts, not by Tigerbrew, and on
+        # PPC includes cross-compilation for i386 and x86_64.  All traces of customization to a
+        # PowerPC CPU must be removed or the compiler will choke when building for the other two
+        # architectures.
+        ENV['HOMEBREW_OPTFLAGS'] = '' if superenv?
+        # Add an appropriate else clause if it doesn’t build correctly under stdenv.
+        args << '--with-universal-archs=all' << 'ax_cv_c_float_words_bigendian=yes'
+        # with a four-architecture build, gettext won’t link correctly as it lacks Intel‐compatible
+        # binaries, so hide it:
         intl_header = HOMEBREW_PREFIX/'include/libintl.h'
-        mv(intl_header, HOMEBREW_PREFIX/'include/not_libintl.h') if intl_header.file?
-        args << 'ax_cv_c_float_words_bigendian=yes'
+        intl_header.rename(HOMEBREW_PREFIX/'include/not_libintl.h') if intl_header.file?
+      elsif Hardware::CPU.intel?
+        args << '--with-universal-archs=intel' << 'ax_cv_c_float_words_bigendian=no'
       end
     end
 
@@ -156,8 +224,8 @@ class Python3 < Formula
     # Symlink the pkgconfig files into HOMEBREW_PREFIX so they're accessible.
     (lib/"pkgconfig").install_symlink Dir["#{frameworks}/Python.framework/Versions/#{xy}/lib/pkgconfig/*"]
 
-    # Remove 2to3 because python2 also installs it
-    rm bin/"2to3"
+    # No need to remove 2to3 – while python2 includes it, the python 2 formula already deletes it
+    # rm bin/"2to3"
 
     # Remove the site-packages that Python created in its Cellar.
     (prefix/"Frameworks/Python.framework/Versions/#{xy}/lib/python#{xy}/site-packages").rmtree
@@ -181,9 +249,12 @@ class Python3 < Formula
     # relocation/bottling attempts.
     (libexec/"wheel/tests/testdata").rmtree
 
-    if build.universal? and Hardware::CPU.ppc?
+    if (build.universal? and Hardware::CPU.ppc?)
+      # remove all non‐PowerPC sub‐binaries to avoid link errors later on
+      purge_keg
+      # restore the libintl header
       intl_header = HOMEBREW_PREFIX/'include/not_libintl.h'
-      mv(intl_header, HOMEBREW_PREFIX/'include/libintl.h') if intl_header.file?
+      intl_header.rename(HOMEBREW_PREFIX/'include/libintl.h') if intl_header.file?
     end
   end
 
