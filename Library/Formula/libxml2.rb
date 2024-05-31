@@ -59,16 +59,6 @@ class Libxml2 < Formula
     end
   end
 
-  def caveats
-    if build.with? 'python'
-      <<-EOS.undent
-        The Python installer warns of a failed test.  While technically correct, it is
-        misleading – this is a keg-only brew and your Python is not SUPPOSED to be able
-        to see it without help.  Ignore the warning -- the installation is successful.
-      EOS
-    end
-  end
-
   test do
     (testpath/"test.c").write <<-EOS.undent
       #include <libxml/tree.h>
