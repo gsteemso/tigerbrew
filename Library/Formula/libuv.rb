@@ -21,6 +21,9 @@ class Libuv < Formula
   depends_on "automake" => :build
   depends_on "autoconf" => :build
   depends_on "libtool" => :build
+  # the build script passes --gnu to m4, which is only understood by GNU M4 1.4.12 or later.  Stock
+  # M4 on Leopard is GNU version 1.4.6.
+  depends_on 'm4' => :build if MacOS.version < :snow_leopard  # adjust this when correct value is learnt
   depends_on :python => :build if MacOS.version <= :snow_leopard && build.with?("docs")
 
   resource "alabaster" do
@@ -78,15 +81,26 @@ class Libuv < Formula
     sha256 "9a490c861f6cf96a0050c29a92d5d1e01eda02ae6f50760ad5c96a327cdf14e8"
   end
 
+  # remove lines referencing file birthtimes, as file `stat`s formerly did not include those
+  patch :p1, :DATA if MacOS.version <= :leopard  # adjust this when we learn where the cutoff is
+
   def install
     ENV.universal_binary if build.universal?
 
     if build.with? "docs"
       ENV.prepend_create_path "PYTHONPATH", buildpath/"sphinx/lib/python2.7/site-packages"
+      # The resource “markupsafe” builds a quad-architecture fat-binary plugin.  Must temporarily
+      # purge all CPU‐specific flags before compiling, or gcc chokes.
+      if superenv? then optflags_stash = ENV['HOMEBREW_OPTFLAGS']; ENV['HOMEBREW_OPTFLAGS'] = ''
+        else cflags_stash = ENV['CFLAGS']; ENV.set_cflags('')
+      end
       resources.each do |r|
         r.stage do
           system "python", *Language::Python.setup_install_args(buildpath/"sphinx")
         end
+      end
+      if superenv? then ENV['HOMEBREW_OPTFLAGS'] = optflags_stash
+        else ENV.set_cflags(cflags_stash)
       end
       ENV.prepend_path "PATH", buildpath/"sphinx/bin"
       # This isn't yet handled by the make install process sadly.
@@ -127,3 +141,25 @@ class Libuv < Formula
     system "./test"
   end
 end
+
+__END__
+--- old/test/test-fs.c      2024-05-29 22:40:00 -0700
++++ new/test/test-fs.c      2024-05-29 22:40:00 -0700
+@@ -1093,8 +1093,6 @@
+   ASSERT(s->st_mtim.tv_nsec == t.st_mtimespec.tv_nsec);
+   ASSERT(s->st_ctim.tv_sec == t.st_ctimespec.tv_sec);
+   ASSERT(s->st_ctim.tv_nsec == t.st_ctimespec.tv_nsec);
+-  ASSERT(s->st_birthtim.tv_sec == t.st_birthtimespec.tv_sec);
+-  ASSERT(s->st_birthtim.tv_nsec == t.st_birthtimespec.tv_nsec);
+   ASSERT(s->st_flags == t.st_flags);
+   ASSERT(s->st_gen == t.st_gen);
+ #elif defined(_AIX)
+@@ -1119,8 +1117,6 @@
+       defined(__FreeBSD__)    || \
+       defined(__OpenBSD__)    || \
+       defined(__NetBSD__)
+-  ASSERT(s->st_birthtim.tv_sec == t.st_birthtim.tv_sec);
+-  ASSERT(s->st_birthtim.tv_nsec == t.st_birthtim.tv_nsec);
+   ASSERT(s->st_flags == t.st_flags);
+   ASSERT(s->st_gen == t.st_gen);
+ # endif
