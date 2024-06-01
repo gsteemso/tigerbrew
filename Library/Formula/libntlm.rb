@@ -1,18 +1,22 @@
 class Libntlm < Formula
   desc "Implements Microsoft's NTLM authentication"
   homepage "https://gitlab.com/gsasl/libntlm/"
-  url "https://gitlab.com/gsasl/libntlm/-/archive/v1.7/libntlm-v1.7.tar.bz2"
-  sha256 "fa1c12c699f71d906b6880981cadba358e5b2e62e3d18424eaa47fa1bd9e918f"
+  url "https://download.savannah.nongnu.org/releases/libntlm/libntlm-1.8.tar.gz"
+  sha256 "ce6569a47a21173ba69c990965f73eb82d9a093eb871f935ab64ee13df47fda1"
 
   option :universal
 
-  depends_on "autoconf" => :build
-  depends_on "git" => :build
-  depends_on "m4" => :build
-
   def install
     ENV.universal_binary if build.universal?
-    system "./bootstrap"
+    args = %W[
+      --prefix=#{prefix}
+      --disable-dependency-tracking
+    ]
+    args << (ARGV.verbose? ? '--disable-silent-rules' : '--enable-silent-rules')
+    system './configure', *args
+    system 'make'
+    system 'make', 'check'
+    system 'make', 'install'
   end
 
   def caveats
