@@ -12,10 +12,13 @@ class Libmpc < Formula
     sha256 "91849971ef740d8abcf09becff9c7500afb861edc4f23db3373a36c1c8782185" => :tiger_altivec
   end
 
+  option :universal
+
   depends_on "gmp"
   depends_on "mpfr"
 
   def install
+    ENV.universal_binary if build.universal?
     args = [
       "--prefix=#{prefix}",
       "--disable-dependency-tracking",
@@ -41,6 +44,7 @@ class Libmpc < Formula
         return 0;
       }
     EOS
+    ENV.universal_binary if build.universal?
     system ENV.cc, "test.c", "-lgmp", "-lmpfr", "-lmpc", "-o", "test"
     system "./test"
   end

@@ -21,6 +21,8 @@ class Guile < Formula
     depends_on "gettext" => :build
   end
 
+  option :universal
+
   depends_on "pkg-config" => :build
   depends_on "libtool" => :run
   depends_on "libffi"
@@ -40,6 +42,7 @@ class Guile < Formula
   end
 
   def install
+    ENV.universal_binary if build.universal?
     system "./autogen.sh" if build.head?
     system "./configure", "--disable-dependency-tracking",
                           "--prefix=#{prefix}",
@@ -57,8 +60,8 @@ class Guile < Formula
   test do
     hello = testpath/"hello.scm"
     hello.write <<-EOS.undent
-    (display "Hello World")
-    (newline)
+      (display "Hello World")
+      (newline)
     EOS
 
     ENV["GUILE_AUTO_COMPILE"] = "0"
