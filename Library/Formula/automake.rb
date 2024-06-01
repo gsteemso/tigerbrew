@@ -15,8 +15,6 @@ class Automake < Formula
   keg_only :provided_until_xcode43
 
   def install
-    # for some reason, this gets set to the stock (system) version of M4, causing immediate failure
-    ENV.delete 'M4'
     ENV["PERL"] = "/usr/bin/perl"
 
     system "./configure", "--prefix=#{prefix}"
