@@ -26,7 +26,6 @@ class Icu4c < Formula
 
     args = ["--prefix=#{prefix}", "--disable-samples", "--enable-static"]
     args << "--with-library-bits=64" if MacOS.prefer_64_bit?
-    args << (ARGV.verbose? ? '--disable-silent-rules' : '--enable-silent-rules')
 
     ENV['CPPFLAGS'] = '-DU_CHARSET_IS_UTF8=1'
     # Could also be done in *args, but that elicits irritating and unhelpful usage warnings.
