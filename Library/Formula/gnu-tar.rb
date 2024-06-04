@@ -17,7 +17,6 @@ class GnuTar < Formula
     args = %W[
       --prefix=#{prefix}
       --disable-dependency-tracking
-      --disable-year2038
       --mandir=#{man}
     ]
     args << "--with-libiconv-prefix=#{Formula["libiconv"].opt_prefix}" if build.with? "libiconv"
@@ -32,10 +31,10 @@ class GnuTar < Formula
 
   def caveats
     if build.without? "default-names" then <<-EOS.undent
-      gnu-tar has been installed as "gtar".
+      gnu-tar is installed as "gtar".
 
       If you really need to use it as "tar", you can add a "gnubin" directory
-      to your PATH from your bashrc like:
+      to your PATH from your bashrc:
 
           PATH="#{opt_libexec}/gnubin:$PATH"
       EOS
