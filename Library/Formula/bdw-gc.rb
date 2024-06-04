@@ -1,5 +1,5 @@
 class BdwGc < Formula
-  desc "Garbage collector for C and C++"
+  desc "Boehm-Demers-Weiser garbage collector for C and C++"
   homepage "http://www.hboehm.info/gc/"
   url "https://www.hboehm.info/gc/gc_source/gc-7.6.12.tar.gz"
   sha256 "6cafac0d9365c2f8604f930aabd471145ac46ab6f771e835e57995964e845082"
