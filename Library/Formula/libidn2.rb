@@ -20,8 +20,7 @@ class Libidn2 < Formula
     depends_on "gettext" => :build
     depends_on "help2man" => :build
     depends_on "libtool" => :build
-    # no formula for “ronn”
-    depends_on "ronn" => :build
+    # depends on Ruby gem “ronn”
   end
 
   option :universal

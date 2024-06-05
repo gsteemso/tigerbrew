@@ -14,7 +14,7 @@ class Zstd < Formula
     depends_on 'make'        => :build  # Tiger's system `make` can't handle the makefile.
   end
 
-  depends_on 'ronn' if build.with? 'manpages'
+  # the manpages depend on a Ruby gem called ronn (for turning Markdown into manpages)
 
   # eliminate a compiler warning flag (-Wvla) that gcc 4.2 doesn’t understand
   patch :DATA
