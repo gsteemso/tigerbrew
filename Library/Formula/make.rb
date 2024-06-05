@@ -1,7 +1,7 @@
 class Make < Formula
   desc "Utility for directing compilation"
   homepage "https://www.gnu.org/software/make/"
-  # audit --strict complained about this URL
+  # URL edited to pacify audit --strict
   url "http://ftpmirror.gnu.org/make/make-4.4.tar.gz"
   mirror "https://ftp.gnu.org/gnu/make/make-4.4.tar.gz"
   sha256 "581f4d4e872da74b3941c874215898a7d35802f03732bdccee1d4a7979105d18"
@@ -10,16 +10,19 @@ class Make < Formula
     sha256 "5093cd5a5970bd2e6cc71924da97099d49bedd0897f3b2a28bb4e7dcfcc30000" => :tiger_altivec
   end
 
+  option :universal
   option "with-default-names", "Do not prepend 'g' to the binary"
 
   depends_on "guile" => :optional
+  depends_on 'pkg-config' if build.with? 'guile'
 
   def install
+    ENV.universal_binary if build.universal?
     args = %W[
       --disable-dependency-tracking
       --prefix=#{prefix}
     ]
-
+    args << (ARGV.verbose? ? '--disable-silent-rules' : '--enable-silent-rules')
     args << "--with-guile" if build.with? "guile"
     args << "--program-prefix=g" if build.without? "default-names"
 
