@@ -10,14 +10,14 @@ class Mpfr < Formula
     sha256 "2be468ac995cbad3fa75c17a7fc41b2967c52591434124de10420b823fc95aa6" => :tiger_altivec
   end
 
-  option "32-bit"
+  option :universal
 
   depends_on "gmp"
 
   def install
-    ENV.m32 if build.build_32_bit?
+    ENV.universal_binary if build.universal?
     system "./configure", "--disable-dependency-tracking", "--prefix=#{prefix}",
-                          "--disable-silent-rules"
+                          (ARGV.verbose? ? '--disable-silent-rules' : '--enable-silent-rules')
     system "make"
     system "make", "check"
     system "make", "install"
@@ -36,6 +36,7 @@ class Mpfr < Formula
         return 0;
       }
     EOS
+    ENV.universal_binary if build.universal?
     system ENV.cc, "test.c", "-L#{HOMEBREW_PREFIX}/lib", "-lgmp", "-lmpfr", "-o", "test"
     system "./test"
   end
