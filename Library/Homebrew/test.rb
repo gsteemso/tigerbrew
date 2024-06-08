@@ -14,13 +14,14 @@ begin
   error_pipe = UNIXSocket.open(ENV["HOMEBREW_ERROR_PIPE"], &:recv_io)
   error_pipe.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
 
-  ENV.activate_extensions!
-  ENV.setup_build_environment
-
   trap("INT", old_trap)
 
   formula = ARGV.formulae.first
   formula.extend(Homebrew::Assertions)
+
+  ENV.activate_extensions!
+  ENV.setup_build_environment(formula)
+
   if ARGV.debug?
     formula.extend(Debrew::Formula)
     raise "test returned false" if formula.run_test == false
@@ -30,6 +31,7 @@ begin
       raise "test returned false" if formula.run_test == false
     end # timeout?
   end # debug?
+  oh1 'Test passed'
 rescue Exception => e
   Marshal.dump(e, error_pipe)
   error_pipe.close
