@@ -1,8 +1,8 @@
 class Libxml2 < Formula
   desc "GNOME XML library"
   homepage "http://xmlsoft.org"
-  url "https://download.gnome.org/sources/libxml2/2.12/libxml2-2.12.6.tar.xz"
-  sha256 "889c593a881a3db5fdd96cc9318c87df34eb648edfc458272ad46fd607353fbb"
+  url "https://download.gnome.org/sources/libxml2/2.12/libxml2-2.12.7.tar.xz"
+  sha256 "24ae78ff1363a973e6d8beba941a7945da2ac056e19b53956aeb6927fd6cfb56"
 
   head do
     url "https://git.gnome.org/browse/libxml2", :using => :git
