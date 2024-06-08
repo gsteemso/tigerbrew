@@ -67,6 +67,7 @@ class Libssh2 < Formula
       }
     EOS
 
+    ENV.universal_binary if build.universal?
     system ENV.cc, "test.c", "-L#{lib}", "-lssh2", "-o", "test"
     system "./test"
   end
