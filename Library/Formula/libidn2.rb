@@ -31,8 +31,7 @@ class Libidn2 < Formula
   def install
     ENV.universal_binary if build.universal?
 
-    args = ["--with-packager=Homebrew", "--prefix=#{prefix}"]
-    args << (ARGV.verbose? ? '--disable-silent-rules' : '--enable-silent-rules')
+    args = ["--disable-silent-rules", "--with-packager=Homebrew", "--prefix=#{prefix}"]
 
     system "./bootstrap", "--skip-po" if build.head?
     system "./configure", *args

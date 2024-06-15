@@ -64,11 +64,11 @@ class Gmp < Formula
         dirs << dir
       end
 
-      args = %W[
-        --prefix=#{prefix}
-        --enable-cxx
+      args = [
+        "--prefix=#{prefix}",
+        '--disable-silent-rules',
+        "--enable-cxx"
       ]
-      args << (ARGV.verbose? ? '--disable-silent-rules' : '--enable-silent-rules')
       args << '--disable-assembly' if Hardware.is_32_bit?
 
       host_sym = (build.bottle? ? (ARGV.bottle_arch or Hardware.oldest_cpu) : build_cpu)

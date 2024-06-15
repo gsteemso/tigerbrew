@@ -1,17 +1,9 @@
 class Coreutils < Formula
   desc "GNU File, Shell, and Text utilities"
   homepage "https://www.gnu.org/software/coreutils"
-  # audit --strict complained about these URLs
-  url "http://ftpmirror.gnu.org/coreutils/coreutils-8.30.tar.xz"
-  mirror "https://ftp.gnu.org/gnu/coreutils/coreutils-8.30.tar.xz"
-  sha256 "e831b3a86091496cdba720411f9748de81507798f6130adeaef872d206e1b057"
-
-  bottle do
-    sha256 "45157fb067a46c953bdfcba90de688903b7b3c8fcb39afa1e0b2fef2819eedc5" => :mojave
-    sha256 "77b09dbe66f3d5098998da6babf953e01e828742b8a740a831cc3f3a1f713df7" => :high_sierra
-    sha256 "94844581b7e08ae2d1dc6c77acfd6e95021283cc8b7c1228fed32a423ae826cc" => :sierra
-    sha256 "a5145f88de2525d168ef998f8310d5c0abcead9efee9108fb61c30de91a4869c" => :el_capitan
-  end
+  url "http://ftpmirror.gnu.org/coreutils/coreutils-9.5.tar.xz"
+  mirror "https://ftp.gnu.org/gnu/coreutils/coreutils-9.5.tar.xz"
+  sha256 'cd328edeac92f6a665de9f323c93b712af1858bc2e0d88f3f7100469470a1b8a'
 
   head do
     url "https://git.savannah.gnu.org/git/coreutils.git"
@@ -52,8 +44,8 @@ class Coreutils < Formula
     args = %W[
       --prefix=#{prefix}
       --program-prefix=g
+      --disable-silent-rules
     ]
-    args << (ARGV.verbose? ? '--disable-silent-rules' : '--enable-silent-rules')
     args << "--without-gmp" if build.without? "gmp"
     system "./configure", *args
     system "make", "install"

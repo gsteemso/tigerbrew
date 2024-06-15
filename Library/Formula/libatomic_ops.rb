@@ -11,14 +11,10 @@ class LibatomicOps < Formula
   def install
     ENV.universal_binary if build.universal?
 
-    args = %W[
-      --prefix=#{prefix}
-      --disable-dependency-tracking
-      --enable-shared
-    ]
-    args << (ARGV.verbose? ? '--disable-silent-rules' : '--enable-silent-rules')
-
-    system "./configure", *args
+    system "./configure", "--disable-dependency-tracking",
+                          "--prefix=#{prefix}",
+                          '--disable-silent-rules',
+                          '--enable-shared'
     system "make"
     system "make", "check"
     system "make", "install"

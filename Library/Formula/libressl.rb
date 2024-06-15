@@ -22,11 +22,11 @@ class Libressl < Formula
     ENV.universal_binary if build.universal?
     args = %W[
       --disable-dependency-tracking
+      --disable-silent-rules
       --prefix=#{prefix}
       --with-openssldir=#{etc}/libressl
       --sysconfdir=#{etc}/libressl
     ]
-    args << (ARGV.verbose? ? "--disable-silent-rules" : "--enable-silent-rules")
 
     # https://github.com/libressl-portable/portable/issues/121
     args << "--disable-asm" if MacOS.version <= :snow_leopard

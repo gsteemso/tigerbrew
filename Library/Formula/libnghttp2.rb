@@ -59,7 +59,7 @@ class Libnghttp2 < Formula
       system "autoreconf", "-ivf" if build.head?
       system "./configure", "--prefix=#{prefix}",
                             '--disable-dependency-tracking',
-                            (ARGV.verbose? ? '--disable-silent-rules' : '--enable-silent-rules'),
+                            '--disable-silent-rules',
                             "--enable-lib-only"
       cd 'lib' do
         system "make"

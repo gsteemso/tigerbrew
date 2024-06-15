@@ -4,6 +4,10 @@ class Libpng < Formula
   url "https://downloads.sourceforge.net/project/libpng/libpng16/1.6.40/libpng-1.6.40.tar.xz"
   sha256 "535b479b2467ff231a3ec6d92a525906fb8ef27978be4f66dbe05d3f3a01b3a1"
 
+  bottle do
+    sha256 "646d0fb6bc09cc2742e86f4ccb827cef0403c0e96a09109ff4746449762840ac" => :tiger_altivec
+  end
+
   head do
     url "https://github.com/glennrp/libpng.git"
 
@@ -12,14 +16,11 @@ class Libpng < Formula
     depends_on "libtool" => :build
   end
 
-  bottle do
-    sha256 "646d0fb6bc09cc2742e86f4ccb827cef0403c0e96a09109ff4746449762840ac" => :tiger_altivec
-  end
+  option :universal
 
   depends_on "zlib"
-  keg_only :provided_pre_mountain_lion
 
-  option :universal
+  keg_only :provided_pre_mountain_lion
 
   def install
     ENV.universal_binary if build.universal?
@@ -44,6 +45,7 @@ class Libpng < Formula
         return 0;
       }
     EOS
+    ENV.universal_binary if build.universal?
     system ENV.cc, "test.c", "-I#{include}", "-L#{lib}", "-lpng", "-o", "test"
     system "./test"
   end

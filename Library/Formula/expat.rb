@@ -16,14 +16,11 @@ class Expat < Formula
 
   def install
     ENV.universal_binary if build.universal?
-    args = %W[
-      --disable-dependency-tracking
-      --prefix=#{prefix}
-      --mandir=#{man}
-      --without-tests
-    ]  # tests need a C++11 compiler
-    args << (ARGV.verbose? ? '--disable-silent-rules' : '--enable-silent-rules')
-    system "./configure", *args
+    system "./configure", "--disable-dependency-tracking",
+                          '--disable-silent-rules',
+                          "--prefix=#{prefix}",
+                          "--mandir=#{man}",
+                          "--without-tests" # Needs a C++11 compiler
     system "make", "install"
   end
 

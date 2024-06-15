@@ -39,11 +39,11 @@ class Libssh2 < Formula
       --prefix=#{prefix}
       --disable-debug
       --disable-dependency-tracking
+      --disable-silent-rules
       --disable-examples-build
       --with-libz
       --with-libz-prefix=#{Formula["zlib"].opt_prefix}
     ]
-    args << (ARGV.verbose? ? '--disable-silent-rules' : '--enable-silent-rules')
 
     if build.with? "libressl"
       args << "--with-libssl-prefix=#{Formula["libressl"].opt_prefix}"

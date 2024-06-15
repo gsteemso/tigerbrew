@@ -20,9 +20,9 @@ class Make < Formula
     ENV.universal_binary if build.universal?
     args = %W[
       --disable-dependency-tracking
+      --disable-silent-rules
       --prefix=#{prefix}
     ]
-    args << (ARGV.verbose? ? '--disable-silent-rules' : '--enable-silent-rules')
     args << "--with-guile" if build.with? "guile"
     args << "--program-prefix=g" if build.without? "default-names"
 

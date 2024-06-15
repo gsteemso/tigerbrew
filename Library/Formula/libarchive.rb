@@ -30,17 +30,14 @@ class Libarchive < Formula
         dirs << dir
       end
 
-      args = %W[
-        --prefix=#{prefix}
-        --disable-dependency-tracking
-        --disable-acl
-        --without-lzo2
-        --without-nettle
-        --without-xml2
-        --without-expat
-      ]
-      args << (ARGV.verbose? ? '--disable-silent-rules' : '--enable-silent-rules')
-      system "./configure", *args
+    system "./configure", "--prefix=#{prefix}",
+                          "--disable-dependency-tracking",
+                          "--disable-silent-rules",
+                          "--disable-acl",
+                          "--without-lzo2",
+                          "--without-nettle",
+                          "--without-xml2",
+                          "--without-expat"
       system 'make'
       system "make", "install"
 

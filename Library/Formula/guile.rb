@@ -62,9 +62,9 @@ class Guile < Formula
       end
 
       system "./autogen.sh" if build.head?
-      system "./configure", "--prefix=#{prefix}",
-                            "--disable-dependency-tracking",
-                            (ARGV.verbose? ? '--disable-silent-rules' : '--enable-silent-rules'),
+      system "./configure", "--disable-dependency-tracking",
+                            '--disable-silent-rules',
+                            "--prefix=#{prefix}",
                             "--with-libreadline-prefix=#{Formula["readline"].opt_prefix}"
       system 'make'
       system "make", "install"

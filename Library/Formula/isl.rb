@@ -51,7 +51,7 @@ class Isl < Formula
 
       system "./autogen.sh" if build.head?
       system "./configure", "--disable-dependency-tracking",
-                            (ARGV.verbose? ? '--disable-silent-rules' : '--enable-silent-rules'),
+                            "--disable-silent-rules",
                             "--prefix=#{prefix}",
                             "--with-gmp=system",
                             "--with-gmp-prefix=#{Formula["gmp"].opt_prefix}"

@@ -114,7 +114,7 @@ class Libuv < Formula
 
     system "./autogen.sh"
     system "./configure", "--disable-dependency-tracking",
-                          (ARGV.verbose? ? '--disable-silent-rules' : '--enable-silent-rules'),
+                          "--disable-silent-rules",
                           "--prefix=#{prefix}"
     system "make"
     system "make", "check" if build.with? "check"

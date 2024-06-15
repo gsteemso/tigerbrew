@@ -8,15 +8,12 @@ class Libntlm < Formula
 
   def install
     ENV.universal_binary if build.universal?
-    args = %W[
-      --prefix=#{prefix}
-      --disable-dependency-tracking
-    ]
-    args << (ARGV.verbose? ? '--disable-silent-rules' : '--enable-silent-rules')
-    system './configure', *args
+    system "./configure", "--prefix=#{prefix}",
+                          "--disable-dependency-tracking",
+                          '--disable-silent-rules'
     system 'make'
     system 'make', 'check'
-    system 'make', 'install'
+    system "make", "install"
   end
 
   def caveats

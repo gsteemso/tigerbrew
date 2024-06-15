@@ -1,14 +1,16 @@
 class Nettle < Formula
   desc "Low-level cryptographic library"
   homepage "https://www.lysator.liu.se/~nisse/nettle/"
-  url "https://ftp.gnu.org/gnu/nettle/nettle-3.9.1.tar.gz"
-  mirror "https://ftpmirror.gnu.org/gnu/nettle/nettle-3.9.1.tar.gz"
+  url "http://ftpmirror.gnu.org/nettle/nettle-3.9.1.tar.gz"
+  mirror "https://ftp.gnu.org/gnu/nettle/nettle-3.9.1.tar.gz"
   sha256 "ccfeff981b0ca71bbd6fbcb054f407c60ffb644389a5be80d6716d5b550c6ce3"
   revision 1
 
   bottle do
     sha256 "1272ad455c11d0fe71d726782b94f1ba2dd4dc624eb420bf05118465d9abdc27" => :tiger_altivec
   end
+
+  option :universal
 
   depends_on "gmp"
   depends_on "openssl3"
@@ -18,6 +20,7 @@ class Nettle < Formula
     ENV.no_optimization
     # see https://github.com/mistydemeo/tigerbrew/issues/89
     ENV.enable_warnings if ENV.compiler == :gcc_4_0
+    ENV.universal_binary if build.universal?
 
     system "./configure", "--disable-dependency-tracking",
                           "--prefix=#{prefix}",
@@ -51,6 +54,7 @@ class Nettle < Formula
         return 0;
       }
     EOS
+    ENV.universal_binary if build.universal?
     system ENV.cc, "test.c", "-lnettle", "-o", "test", "-L#{lib}"
     system "./test"
   end

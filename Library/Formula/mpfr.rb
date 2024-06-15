@@ -17,7 +17,7 @@ class Mpfr < Formula
   def install
     ENV.universal_binary if build.universal?
     system "./configure", "--disable-dependency-tracking", "--prefix=#{prefix}",
-                          (ARGV.verbose? ? '--disable-silent-rules' : '--enable-silent-rules')
+                          "--disable-silent-rules"
     system "make"
     system "make", "check"
     system "make", "install"
