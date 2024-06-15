@@ -70,7 +70,9 @@ module Homebrew
       end
     end
 
-    unless problem_count.zero?
+    if problem_count.zero?
+      oh1 'Audit passed'
+    else
       problems = "problem" + plural(problem_count)
       formulae = "formula" + plural(formula_count, "e")
       ofail "#{problem_count} #{problems} in #{formula_count} #{formulae}"
@@ -747,11 +749,11 @@ class FormulaAuditor
     end
 
 # This cannot work, because
-#    (1) `ARGV` checks environment variables but `build` does not, and
+#    (1) `ARGV` checks environment variables when `build` does not, and
 #    (2) `build.include?` (the only way to do this) is marked as being private in the comments, and
 #    (3) `build` has no equivalent to `ARGV.bottle_arch`.
-# If you absolutely INSIST on this point, you'll need to make `build` wrappers around the `ARGV`
-# methods.
+# If this point is to be absolutely INSISTED upon, `build` wrappers will need to be made around the
+# `ARGV` methods.
 #
 #   if line =~ /ARGV\.(?!(debug\?|verbose\?|value[\(\s]))/
 #     problem "Use build instead of ARGV to check options"
