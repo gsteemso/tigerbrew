@@ -9,29 +9,42 @@ class TigerOnly < Requirement
 end
 
 class AppleGcc42 < Formula
-  desc 'the Apple version of the GNU Compiler Collection for OS X Tiger'
-  homepage 'http://r.research.att.com/tools/'
-  url 'https://ia902307.us.archive.org/31/items/tigerbrew/gcc-42-5553-darwin8-all.tar.gz'
-  mirror 'http://r.research.att.com/gcc-42-5553-darwin8-all.tar.gz'
-  version '4.2.1-5553'
-  sha256 '85f4a4be48ead22b016142504f955adc2da7aa1eb1e44590263ca52f8c8a598a'
+  desc 'the last Apple version of the GNU Compiler Collection for OS X'
+  homepage 'http://https://opensource.apple.com/releases/'
+  url 'https://github.com/apple-oss-distributions/gcc/archive/refs/tags/gcc-5666.3.tar.gz'
+  version '4.2.1-5666.3'
+  sha256 '2e9889ce0136f5a33298cf7cce5247d31a5fb1856e6f301423bde4a81a5e7ea6'
 
   depends_on TigerOnly
 
+  depends_on 'gmp'
+  depends_on 'mpfr'
+
   def install
-    cd 'usr' do
-      prefix.install Dir['*']
-    end
+    args = [
+      'RC_OS=macos',
+      'RC_ARCHS=ppc i386',
+      'TARGETS=ppc i386',
+      "SRCROOT=#{buildpath}",
+      "OBJROOT=#{buildpath}/build/obj",
+      "DSTROOT=#{buildpath}/build/dst",
+      "SYMROOT=#{buildpath}/build/sym"
+    ]
+    mkdir_p ['build/obj', 'build/dst', 'build/sym']
+    system 'gnumake', 'install', *args
+    doc.install *Dir['build/dst/Developer/Documentation/DocSets/com.apple.ADC_Reference_Library.DeveloperTools.docset/Contents/Resources/Documents/documentation/DeveloperTools/gcc-4.2.1/*']
+    bin.install *Dir['build/dst/usr/bin/*']
+    include.install 'build/dst/usr/include/gcc'
+    lib.install 'build/dst/usr/lib/gcc'
+    libexec.install 'build/dst/usr/libexec/gcc'
+    man.install 'build/dst/usr/share/man/man1'
   end
 
   def caveats
     <<-EOS.undent
-      This formula contains compilers built from Apple's GCC sources, build
-      5553, available from:
-
-        http://opensource.apple.com/tarballs/gcc
-
-      All compilers have a `-4.2` suffix. A GFortran compiler is also included.
+      This formula brews compilers built from Apple’s GCC sources, build 5666.3 (the
+      last available from Apple’s open‐source distributions).  All compilers have a
+      “-4.2” suffix.
     EOS
   end
 end
