@@ -6,33 +6,43 @@
 # Some build tools set DEVELOPER_DIR, so discard it
 unset DEVELOPER_DIR
 
+# with no arguments, fall back on the real xcrun
 if [ $# -eq 0 ]; then
   exec /usr/bin/xcrun "$@"
 fi
 
+# if the first argument is a switch instead of a command name, fall back on the real xcrun
 case "$1" in
   -*) exec /usr/bin/xcrun "$@" ;;
 esac
 
+# pull out the command name
 arg0=$1
 shift
 
+# try a command in /usr/bin/
 exe="/usr/bin/${arg0}"
-if [ -x "$exe" ]; then
-  if [ -n "$HOMEBREW_PREFER_CLT_PROXIES" ]; then
-    exec "$exe" "$@"
-  elif [ -z "$HOMEBREW_SDKROOT" -o ! -d "$HOMEBREW_SDKROOT" ]; then
-    exec "$exe" "$@"
-  fi
+
+# if we prefer CLT proxies or there isn’t a $HOMEBREW_SDKROOT, then run the command
+if [ -x "$exe" -a \
+     ( -n "$HOMEBREW_PREFER_CLT_PROXIES" -o \
+       -z "$HOMEBREW_SDKROOT" -o ! -d "$HOMEBREW_SDKROOT" ) \
+   ]; then
+  exec "$exe" "$@"
 fi
 
+# absolute pathname to our directory (should be $HOMEBREW_REPOSITORY/Library/ENV/[version]/)
 SUPERBIN=$(cd "${0%/*}" && pwd -P)
 
+# try a command found by the real xcrun
 exe=$(/usr/bin/xcrun --find "$arg0" 2>/dev/null)
+
+# if the command isn’t one of the fake ones in our directory, run it
 if [ -x "$exe" -a "${exe%/*}" != "$SUPERBIN" ]; then
   exec "$exe" "$@"
 fi
 
+# fall back on the $PATH, but filter out our fakes in $SUPERBIN
 old_IFS=$IFS
 IFS=:
 for path in $PATH; do
@@ -47,6 +57,7 @@ for path in $PATH; do
 done
 IFS=$old_IFS
 
+# at this point, we don’t know where the command is; give up
 echo >&2 "
 Failed to execute $arg0 $@
 
