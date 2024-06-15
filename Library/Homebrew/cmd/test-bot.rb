@@ -11,9 +11,9 @@
 #: --junit:         Generate a JUnit XML test results file.
 #: --email:         Generate an email subject file.
 #: --no-bottle:     Run brew install without --build-bottle
-#: --keep-old:      Run brew bottle --keep-old to build new bottles for a single platform.
+#: --keep-old:      Run brew bottle --keep-old to build new one-platform bottles.
 #: --HEAD:          Run brew install with --HEAD
-#: --local:         Ask Homebrew to write verbose logs under ./logs/ and set HOME to ./home/
+#: --local:         Have Homebrew verbosely log to ./logs/ & set HOME = ./home/
 #: --tap=<tap>:     Use the git repository of the given tap
 #: --dry-run:       Just print commands, don't run them.
 #: --fail-fast:     Immediately exit on a failing step.
