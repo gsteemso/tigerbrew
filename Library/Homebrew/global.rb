@@ -1,17 +1,12 @@
-require "rbconfig"
-require "extend/dir"
-require "extend/module"
-require "extend/fileutils"
-require "extend/hash"
+require "rbconfig"          #⎟ Ruby libraries
+require "set"               #⎠
+require "extend/fileutils"  # all these others are Homebrew libraries
 require "extend/pathname"
 require "extend/ARGV"
 require "extend/string"
-require "extend/symbol"
-require "extend/enumerable"
 require "os"
 require "utils"
 require "exceptions"
-require "set"
 require "extend/tiger" if RUBY_VERSION == "1.8.2"
 require "extend/leopard" if RUBY_VERSION <= "1.8.6"
 
@@ -20,7 +15,7 @@ ARGV.extend(HomebrewArgvExtension)
 HOMEBREW_VERSION = ENV["HOMEBREW_VERSION"]
 HOMEBREW_WWW = "https://github.com/mistydemeo/tigerbrew"
 
-require "config"
+require "config"  # a Homebrew library
 
 RbConfig = Config if RUBY_VERSION < "1.8.6" # different module name on Tiger
 
@@ -31,7 +26,7 @@ else
     RbConfig::CONFIG["ruby_install_name"] + RbConfig::CONFIG["EXEEXT"]
   )
 end
-RUBY_BIN = RUBY_PATH.dirname
+RUBY_BIN = RUBY_PATH.dirname  # the directory our binary lives in
 
 if RUBY_PLATFORM =~ /darwin/
   MACOS_FULL_VERSION = `/usr/bin/sw_vers -productVersion`.chomp
