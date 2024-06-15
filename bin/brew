@@ -1,21 +1,13 @@
 #!/bin/bash
-chdir() {
-  cd "$@" >/dev/null
-}
+cdP() { cd "$@" >/dev/null && pwd -P ; }
 
-BREW_FILE_DIRECTORY="$(chdir "${0%/*}" && pwd -P)"
+BREW_FILE_DIRECTORY="$(cdP "${0%/*}")"
 HOMEBREW_BREW_FILE="$BREW_FILE_DIRECTORY/${0##*/}"
+test -L "$HOMEBREW_BREW_FILE" && \
+    BREW_FILE_DIRECTORY="$(cdP "$(dirname "$(readlink "$HOMEBREW_BREW_FILE")")")"
 
-if [ -L "$HOMEBREW_BREW_FILE" ]
-then
-  BREW_SYMLINK="$(readlink "$HOMEBREW_BREW_FILE")"
-  BREW_SYMLINK_DIRECTORY="$(dirname "$BREW_SYMLINK")"
-  BREW_FILE_DIRECTORY="$(chdir "$BREW_FILE_DIRECTORY" &&
-                         chdir "$BREW_SYMLINK_DIRECTORY" && pwd -P)"
-fi
-
-HOMEBREW_PREFIX="$(chdir "$(dirname "$(dirname "$HOMEBREW_BREW_FILE")")" && pwd -P)"
-HOMEBREW_REPOSITORY="$(chdir "$BREW_FILE_DIRECTORY"/../ && pwd -P)"
-HOMEBREW_LIBRARY="$(chdir "$BREW_FILE_DIRECTORY"/../Library && pwd -P)"
+HOMEBREW_PREFIX="$(cdP "${HOMEBREW_BREW_FILE%/*/*}")"
+HOMEBREW_REPOSITORY="$(cdP "$BREW_FILE_DIRECTORY/..")"
+HOMEBREW_LIBRARY="$(cdP "$HOMEBREW_REPOSITORY/Library")"
 
 source "$HOMEBREW_LIBRARY/brew.sh"
