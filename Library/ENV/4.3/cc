@@ -6,7 +6,7 @@ require "set"
 
 if RUBY_VERSION < "1.8.7"
   $:.unshift("#{ENV['HOMEBREW_REPOSITORY']}/Library/Homebrew")
-  require 'extend/string'
+  require 'extend/leopard'
   require 'vendor/backports/enumerator'
 end
 
@@ -141,7 +141,7 @@ class Cmd
     refurb_arg_parts = []
 
     case arg
-    when /^-g\d?/, /^-gstabs\d+/, "-gstabs+", /^-ggdb\d?/, "-gdwarf-2",
+    when /^-g[1-9]?/, /^-gstabs[1-9+]?/, /^-ggdb[1-9]?/, "-gdwarf-2",
       /^-march=.+/, /^-mtune=.+/, /^-mcpu=.+/,
       /^-O[0-9zs]?$/, "-fast", "-no-cpp-precomp",
       "-pedantic", "-pedantic-errors", "-Wno-long-double",
