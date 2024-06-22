@@ -3,20 +3,12 @@
 
 std_trap = trap("INT") { exit! 130 } # no backtrace thanks
 
-require "pathname"  # a Ruby library
-
-HOMEBREW_LIBRARY_PATH = Pathname.new(__FILE__).realpath.parent.join("Homebrew")
-$:.unshift(HOMEBREW_LIBRARY_PATH.to_s) # adds HOMEBREW_LIBRARY_PATH to front of library search path
+# add HOMEBREW_LIBRARY_PATH to front of Ruby‐library search path
+$:.unshift("#{ENV['HOMEBREW_LIBRARY']}/Homebrew")
 
 require 'global'  # a Homebrew library
-
-HOMEBREW_BREW_FILE  = Pathname.new(ENV['HOMEBREW_BREW_FILE'])
-HOMEBREW_CACHE      = Pathname.new(ENV['HOMEBREW_CACHE'])
-HOMEBREW_CELLAR     = Pathname.new(ENV['HOMEBREW_CELLAR'])
-HOMEBREW_PREFIX     = Pathname.new(ENV['HOMEBREW_PREFIX'])
-HOMEBREW_REPOSITORY = Pathname.new(ENV['HOMEBREW_REPOSITORY'])
-HOMEBREW_LIBRARY    = Pathname.new(ENV['HOMEBREW_LIBRARY'])
-HOMEBREW_VERSION    = Pathname.new(ENV['HOMEBREW_VERSION'])
+# `global.rb` in turn [require]s `config.rb`, which imports all of our important environment
+# variables as Ruby constants
 
 case ARGV.first
 when '-V', '--version'
