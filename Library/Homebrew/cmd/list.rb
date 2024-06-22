@@ -30,7 +30,7 @@ module Homebrew
       else
         ENV["CLICOLOR"] = nil
         # need to exclude --flags, because they choke `ls`
-        exec "ls", *((ARGV.options_only - ARGV.flags_only) << HOMEBREW_CELLAR)
+        exec "ls", *(ARGV.options_only - ARGV.flags_only), HOMEBREW_CELLAR
       end
     elsif ARGV.verbose? || !$stdout.tty?
       exec "find", *ARGV.kegs.map(&:to_s) + %w[-not -type d -print]
