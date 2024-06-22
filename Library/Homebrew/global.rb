@@ -1,21 +1,23 @@
-require "rbconfig"          #⎟ Ruby libraries
-require "set"               #⎠
-require "extend/fileutils"  # all these others are Homebrew libraries
-require "extend/pathname"
+require "pathname"  #
+require "rbconfig"  # Ruby libraries
+require "set"       #
+# all these others are Homebrew libraries
+require "extend/leopard" if RUBY_VERSION <= "1.8.6"
+require "extend/tiger" if RUBY_VERSION == "1.8.2"
 require "extend/ARGV"
+require "extend/fileutils"
+require "extend/module"
+require "extend/pathname"
 require "extend/string"
+require "exceptions"
 require "os"
 require "utils"
-require "exceptions"
-require "extend/tiger" if RUBY_VERSION == "1.8.2"
-require "extend/leopard" if RUBY_VERSION <= "1.8.6"
+
+require "config"
 
 ARGV.extend(HomebrewArgvExtension)
 
-HOMEBREW_VERSION = ENV["HOMEBREW_VERSION"]
 HOMEBREW_WWW = "https://github.com/mistydemeo/tigerbrew"
-
-require "config"  # a Homebrew library
 
 RbConfig = Config if RUBY_VERSION < "1.8.6" # different module name on Tiger
 
@@ -26,7 +28,7 @@ else
     RbConfig::CONFIG["ruby_install_name"] + RbConfig::CONFIG["EXEEXT"]
   )
 end
-RUBY_BIN = RUBY_PATH.dirname  # the directory our binary lives in
+RUBY_BIN = RUBY_PATH.dirname  # the directory our Ruby interpreter lives in
 
 if RUBY_PLATFORM =~ /darwin/
   MACOS_FULL_VERSION = `/usr/bin/sw_vers -productVersion`.chomp
