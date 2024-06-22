@@ -69,9 +69,10 @@ class Build
   end
 
   def install
-    keg_only_deps = deps.map(&:to_formula).select(&:keg_only?)
+    _deps = deps.map(&:to_formula)
+    keg_only_deps = _deps.select(&:keg_only?)
 
-    deps.map(&:to_formula).each do |dep|
+    _deps.each do |dep|
       fixopt(dep) unless dep.opt_prefix.directory?
     end
 
@@ -79,27 +80,26 @@ class Build
 
     if superenv?
       ENV.keg_only_deps = keg_only_deps
-      ENV.deps = deps.map(&:to_formula)
+      ENV.deps = _deps
       ENV.x11 = reqs.any? { |rq| rq.is_a?(X11Requirement) }
-      ENV.setup_build_environment(formula)
-      post_superenv_hacks
-      reqs.each(&:modify_build_environment)
-      deps.each(&:modify_build_environment)
-    else
-      ENV.setup_build_environment(formula)
-      reqs.each(&:modify_build_environment)
-      deps.each(&:modify_build_environment)
-
-      keg_only_deps.each do |dep|
-        ENV.prepend_path "PATH", dep.opt_bin.to_s
-        ENV.prepend_path "PKG_CONFIG_PATH", "#{dep.opt_lib}/pkgconfig"
-        ENV.prepend_path "PKG_CONFIG_PATH", "#{dep.opt_share}/pkgconfig"
-        ENV.prepend_path "ACLOCAL_PATH", "#{dep.opt_share}/aclocal"
-        ENV.prepend_path "CMAKE_PREFIX_PATH", dep.opt_prefix.to_s
-        ENV.prepend "LDFLAGS", "-L#{dep.opt_lib}" if dep.opt_lib.directory?
-        ENV.prepend "CPPFLAGS", "-I#{dep.opt_include}" if dep.opt_include.directory?
-      end
     end
+
+    ENV.setup_build_environment(formula)
+
+    post_superenv_hacks if superenv?
+
+    reqs.each(&:modify_build_environment)
+    deps.each(&:modify_build_environment)
+
+    keg_only_deps.each do |dep|
+      ENV.prepend_path "PATH", dep.opt_bin.to_s
+      ENV.prepend_path "PKG_CONFIG_PATH", "#{dep.opt_lib}/pkgconfig"
+      ENV.prepend_path "PKG_CONFIG_PATH", "#{dep.opt_share}/pkgconfig"
+      ENV.prepend_path "ACLOCAL_PATH", "#{dep.opt_share}/aclocal"
+      ENV.prepend_path "CMAKE_PREFIX_PATH", dep.opt_prefix.to_s
+      ENV.prepend "LDFLAGS", "-L#{dep.opt_lib}" if dep.opt_lib.directory?
+      ENV.prepend "CPPFLAGS", "-I#{dep.opt_include}" if dep.opt_include.directory?
+    end unless superenv?
 
     formula.extend(Debrew::Formula) if ARGV.debug?
 
@@ -170,7 +170,7 @@ begin
   trap("INT", old_trap)
 
   formula = ARGV.formulae.first
-  options = Options.create(ARGV.flags_only)
+  options = Options.create(ARGV.effective_flags)
   build   = Build.new(formula, options)
   build.install
 rescue Exception => e

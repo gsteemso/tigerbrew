@@ -1,4 +1,27 @@
 module HomebrewArgvExtension
+  # private
+  ENV_ARGS = %w[
+    build_bottle?
+    build_from_source?
+    debug?
+    homebrew_developer?
+    sandbox?
+    verbose?
+  ].freeze
+
+  #private
+  SWITCHES = {
+    '1' => '--1', # (“do not recurse”)
+  # 'd' => '--debug' (already handled as an ENV_ARG)
+    'f' => '--force',
+    'g' => '--git',
+    'i' => '--interactive',
+    'n' => '--dry-run',
+    'q' => '--quieter'
+  # 's' => '--build-from-source' (already handled as an ENV_ARG)
+  # 'v' => '--verbose' (already handled as an ENV_ARG)
+  }.freeze
+
   def named
     @named ||= self - options_only
   end
@@ -9,6 +32,18 @@ module HomebrewArgvExtension
 
   def flags_only
     select { |arg| arg.start_with?("--") }
+  end
+
+  def effective_flags
+    flags = flags_only
+    ENV_ARGS.each do |a|
+      flag = "--#{a.gsub('_', '-').chop}"
+      flags << flag if (not(include? flag) and send a.to_sym)
+    end
+    SWITCHES.each do |s, flag|
+      flags << flag if (switch?(s) and not include? flag)
+    end
+    flags
   end
 
   def formulae
