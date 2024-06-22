@@ -748,16 +748,10 @@ class FormulaAuditor
       problem "Don't negate 'build.with?': use 'build.without?'"
     end
 
-# This cannot work, because
-#    (1) `ARGV` checks environment variables when `build` does not, and
-#    (2) `build.include?` (the only way to do this) is marked as being private in the comments, and
-#    (3) `build` has no equivalent to `ARGV.bottle_arch`.
-# If this point is to be absolutely INSISTED upon, `build` wrappers will need to be made around the
-# `ARGV` methods.
-#
-#   if line =~ /ARGV\.(?!(debug\?|verbose\?|value[\(\s]))/
-#     problem "Use build instead of ARGV to check options"
-#   end
+    if line =~ /ARGV\.(include|build_32_bit|build_(bottle|devel|head|stable|universal))\?/
+      right = ($2 ? $2 : $1) + '?'
+      problem "Use build.#{right} instead of ARGV.#{$1} to check options"
+    end
 
     if line =~ /def options/
       problem "Use new-style option definitions"
