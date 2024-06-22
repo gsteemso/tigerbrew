@@ -188,6 +188,29 @@ module SharedEnvExtension
     append "CPPFLAGS", "-DNCURSES_OPAQUE=0"
   end
 
+  # Changes the MAKEFLAGS environment variable, causing make to use a single job.  This is useful
+  # for makefiles with race conditions.  When passed a block, MAKEFLAGS is altered only for the
+  # duration of the block and is restored after its completion.
+  def deparallelize
+    old = self["MAKEFLAGS"]
+    j_rex = /(-\w*j)\d+/
+    if old =~ j_rex
+      self['MAKEFLAGS'] = old.sub(j_rex, '\11')
+    else
+      append 'MAKEFLAGS', '-j1'
+    end
+    if block_given?
+      begin
+        yield
+      ensure
+        self["MAKEFLAGS"] = old
+      end
+    end
+
+    old
+  end
+  alias_method :j1, :deparallelize
+
   # @private
   def userpaths!
     paths = self["PATH"].split(File::PATH_SEPARATOR)

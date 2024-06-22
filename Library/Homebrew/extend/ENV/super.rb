@@ -64,7 +64,7 @@ module Superenv
     self["CMAKE_INCLUDE_PATH"] = determine_cmake_include_path
     self["CMAKE_LIBRARY_PATH"] = determine_cmake_library_path
     self["ACLOCAL_PATH"] = determine_aclocal_path
-#    self["M4"] = MacOS.locate("m4") if deps.any? { |d| d.name == "autoconf" }
+    self["M4"] = determine_m4
     self["HOMEBREW_ISYSTEM_PATHS"] = determine_isystem_paths
     self["HOMEBREW_INCLUDE_PATHS"] = determine_include_paths
     self["HOMEBREW_LIBRARY_PATHS"] = determine_library_paths
@@ -157,6 +157,15 @@ module Superenv
     paths << "#{HOMEBREW_PREFIX}/share/aclocal"
     paths << "#{MacOS::X11.share}/aclocal" if x11?
     paths.to_path_s
+  end
+
+  def determine_m4
+    m4 = Formula['m4']
+    if m4.installed?
+      m4.opt_bin/'m4'
+    else
+      MacOS.locate("m4") if deps.any? { |d| d.name == "autoconf" }
+    end
   end
 
   def determine_isystem_paths
@@ -253,24 +262,6 @@ module Superenv
   end
 
   public
-
-  # Changes the MAKEFLAGS environment variable, causing make to use a single job.  This is useful
-  # for makefiles with race conditions.  When passed a block, MAKEFLAGS is altered only for the
-  # duration of the block and is restored after its completion.
-  def deparallelize
-    old = self["MAKEFLAGS"]
-    self['MAKEFLAGS'] = self['MAKEFLAGS'].sub(/(-\w*j)\d+/, '\11')
-    if block_given?
-      begin
-        yield
-      ensure
-        self["MAKEFLAGS"] = old
-      end
-    end
-
-    old
-  end
-  alias_method :j1, :deparallelize
 
   def make_jobs
     self["MAKEFLAGS"] =~ /-\w*j(\d)+/

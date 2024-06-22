@@ -93,24 +93,6 @@ module Stdenv
     paths.select { |d| File.directory? d }.join(File::PATH_SEPARATOR)
   end
 
-  # Changes the MAKEFLAGS environment variable, causing make to use a single job.  This is useful
-  # for makefiles with race conditions.  When passed a block, MAKEFLAGS is altered only for the
-  # duration of the block and is restored after its completion.
-  def deparallelize
-    old = self["MAKEFLAGS"]
-    self["MAKEFLAGS"] = self["MAKEFLAGS"].sub(/(-\w*j)\d+/, '\11')
-    if block_given?
-      begin
-        yield
-      ensure
-        self["MAKEFLAGS"] = old
-      end
-    end
-
-    old
-  end
-  alias_method :j1, :deparallelize
-
   # These methods are no-ops for compatibility.
   %w[fast O4 Og].each { |opt| define_method(opt) {} }
 
