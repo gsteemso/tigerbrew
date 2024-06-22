@@ -94,9 +94,9 @@ export HOMEBREW_FORCE_VENDOR_RUBY="1"
 
 # Declared in bin/brew
 export HOMEBREW_BREW_FILE
+export HOMEBREW_LIBRARY
 export HOMEBREW_PREFIX
 export HOMEBREW_REPOSITORY
-export HOMEBREW_LIBRARY
 
 # Declared in brew.sh
 export HOMEBREW_CACHE
