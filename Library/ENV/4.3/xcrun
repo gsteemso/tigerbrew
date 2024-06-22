@@ -24,10 +24,10 @@ shift
 exe="/usr/bin/${arg0}"
 
 # if we prefer CLT proxies or there isn’t a $HOMEBREW_SDKROOT, then run the command
-if [ -x "$exe" -a \
-     ( -n "$HOMEBREW_PREFER_CLT_PROXIES" -o \
-       -z "$HOMEBREW_SDKROOT" -o ! -d "$HOMEBREW_SDKROOT" ) \
-   ]; then
+if [ -x "$exe" ] && \
+   [ -n "$HOMEBREW_PREFER_CLT_PROXIES" -o \
+     -z "$HOMEBREW_SDKROOT" -o ! -d "$HOMEBREW_SDKROOT" ]
+then
   exec "$exe" "$@"
 fi
 
