@@ -17,10 +17,14 @@ begin
   trap("INT", old_trap)
 
   formula = ARGV.formulae.first
+  formula.build = BuildOptions.new(Tab.for_formula(formula).used_options, formula.options)
   formula.extend(Homebrew::Assertions)
 
   ENV.activate_extensions!
   ENV.setup_build_environment(formula)
+  # enable argument refurbishment
+  # (this lets the optimization flags be noticed; otherwise, 64‐bit and universal builds fail)
+  ENV.append 'HOMEBREW_CCCFG', 'O'
 
   if ARGV.debug?
     formula.extend(Debrew::Formula)
