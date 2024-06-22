@@ -862,7 +862,11 @@ class Formula
       begin
         yield self
       ensure
-        cp Dir["{config.log,CMakeCache.txt}"], logs
+        begin
+          cp Dir["{config.log,CMakeCache.txt}"], logs
+        rescue
+          # do nothing... but it stops a failed logging from torpedoing the entire install process
+        end
       end
     end
   end
@@ -1219,7 +1223,7 @@ class Formula
 
   # @private
   def test_fixtures(file)
-    HOMEBREW_LIBRARY.join("Homebrew", "test", "fixtures", file)
+    HOMEBREW_LIBRARY_PATH.join("test", "fixtures", file)
   end
 
   # This method is overriden in {Formula} subclasses to provide the installation instructions.
