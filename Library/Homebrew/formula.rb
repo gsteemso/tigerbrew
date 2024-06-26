@@ -862,11 +862,9 @@ class Formula
       begin
         yield self
       ensure
-        begin
-          cp Dir["{config.log,CMakeCache.txt}"], logs
-        rescue
-          # do nothing... but it stops a failed logging from torpedoing the entire install process
-        end
+        # the `open` inside `cp` should not be able to fail, so when it does,
+        # it torpedoes the entire install; thus this added `rescue nil` clause
+        cp Dir["{config.log,CMakeCache.txt}"], logs rescue nil
       end
     end
   end
