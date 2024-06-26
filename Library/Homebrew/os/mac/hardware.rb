@@ -1,4 +1,5 @@
 require "mach"
+require 'utils/popen'
 
 module MacCPUs
   OPTIMIZATION_FLAGS = {
@@ -60,7 +61,7 @@ module MacCPUs
         :g4  # PowerPC 7400
       when 11
         :g4e # PowerPC 7450
-      when 100
+      when 0x64
         # This is the only 64-bit PPC CPU type, so it's useful
         # to distinguish in `brew config` output and in bottle tags
         MacOS.prefer_64_bit? ? :g5_64 : :g5 # PowerPC 970
