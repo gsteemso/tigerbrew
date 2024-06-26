@@ -16,7 +16,7 @@ class Cmd
 
   def initialize(arg0, initial_args)
     @arg0 = arg0
-    @instance_args = initial_args.freeze
+    @given_args = initial_args.freeze
     @config = ENV.fetch("HOMEBREW_CCCFG") { "" }
     @prefix = ENV["HOMEBREW_PREFIX"]
     @cellar = ENV["HOMEBREW_CELLAR"]
@@ -29,13 +29,13 @@ class Cmd
   def mode
     if @arg0 == "cpp" || @arg0 == "ld"
       @arg0.to_sym
-    elsif @instance_args.include? "-c"
+    elsif @given_args.include? "-c"
       if @arg0 =~ /(?:c|g|clang)\+\+/
         :cxx
       else
         :cc
       end
-    elsif @instance_args.include? "-E"
+    elsif @given_args.include? "-E"
       :ccE
     else
       if @arg0 =~ /(?:c|g|clang)\+\+/
@@ -67,15 +67,15 @@ class Cmd
   end
 
   def distill_args
-    if @instance_args.length == 1 && @instance_args[0] == "-v"
+    if @given_args.length == 1 && @given_args[0] == "-v"
       # Don't add linker arguments if -v passed as sole option. This stops gcc
       # -v with no other arguments from outputting a linker error. Some
       # software uses gcc -v (wrongly) to sniff the GCC version.
-      return @instance_args.dup
+      return @given_args.dup
     end
 
     if !refurbish_args? || tool == "ld" || configure?
-      distilled_args = @instance_args.dup
+      distilled_args = @given_args.dup
     else
       distilled_args = refurbished_args
     end
@@ -111,7 +111,7 @@ class Cmd
     @iset = Set.new(isystem_paths + include_paths)
 
     refurbed_args = []
-    enum = @instance_args.each
+    enum = @given_args.each
 
     loop do
       case arg = enum.next
@@ -330,4 +330,6 @@ if __FILE__ == $PROGRAM_NAME
 
   global_args << { :close_others => false } if RUBY_VERSION >= "2.0"
   exec "#{dirname}/xcrun", tool, *global_args
+else
+  abort "Error:  #{__FILE__} ≠ #{$PROGRAM_NAME}."
 end
