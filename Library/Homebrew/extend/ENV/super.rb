@@ -263,6 +263,14 @@ module Superenv
 
   public
 
+  def cccfg_add(datum)
+    append 'HOMEBREW_CCCFG', datum, '' unless self['HOMEBREW_CCCFG'].include? datum
+  end
+
+  def cccfg_remove(datum)
+    remove 'HOMEBREW_CCCFG', datum if self['HOMEBREW_CCCFG'].include? datum
+  end
+
   def make_jobs
     self["MAKEFLAGS"] =~ /-\w*j(\d)+/
     [$1.to_i, 1].max
@@ -282,7 +290,7 @@ module Superenv
   end
 
   def permit_arch_flags
-    append "HOMEBREW_CCCFG", "K" unless self['HOMEBREW_CCCFG'].include? 'K'
+    cccfg_add 'K'
   end
 
   def m32
@@ -312,26 +320,26 @@ module Superenv
   def cxx11
     case homebrew_cc
     when "clang"
-      append "HOMEBREW_CCCFG", "x", ""
-      append "HOMEBREW_CCCFG", "g", ""
+      cccfg_add 'x'
+      cccfg_add 'g'
     when GNU_GXX11_REGEXP
-      append "HOMEBREW_CCCFG", "x", ""
+      cccfg_add 'x'
     else
       raise "The selected compiler doesn't support C++11: #{homebrew_cc}"
     end
   end
 
   def libcxx
-    append "HOMEBREW_CCCFG", "g", "" if compiler == :clang
+    cccfg_add 'g' if compiler == :clang
   end
 
   def libstdcxx
-    append "HOMEBREW_CCCFG", "h", "" if compiler == :clang
+    cccfg_add 'h' if compiler == :clang
   end
 
   # @private
   def refurbish_args
-    append "HOMEBREW_CCCFG", "O", ""
+    cccfg_add 'O'
   end
 
   %w[O3 O2 O1 O0 Os].each do |opt|

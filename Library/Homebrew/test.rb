@@ -24,7 +24,7 @@ begin
   ENV.setup_build_environment(formula)
   # enable argument refurbishment
   # (this lets the optimization flags be noticed; otherwise, 64‐bit and universal builds fail)
-  ENV.append 'HOMEBREW_CCCFG', 'O'
+  ENV.cccfg_add 'O' if superenv?
 
   if ARGV.debug?
     formula.extend(Debrew::Formula)
