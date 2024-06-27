@@ -1,29 +1,10 @@
 class Gcc6 < Formula
-  def arch
-    if Hardware::CPU.type == :intel
-      if MacOS.prefer_64_bit?
-        "x86_64"
-      else
-        "i686"
-      end
-    elsif Hardware::CPU.type == :ppc
-      if MacOS.prefer_64_bit?
-        "powerpc64"
-      else
-        "powerpc"
-      end
-    end
-  end
-
-  def osmajor
-    `uname -r`.chomp
-  end
-
   desc "GNU compiler collection"
   homepage "https://gcc.gnu.org"
-  url "https://ftpmirror.gnu.org/gcc/gcc-6.5.0/gcc-6.5.0.tar.xz"
+  url "http://ftpmirror.gnu.org/gcc/gcc-6.5.0/gcc-6.5.0.tar.xz"
   mirror "https://ftp.gnu.org/gnu/gcc/gcc-6.5.0/gcc-6.5.0.tar.xz"
   sha256 "7ef1796ce497e89479183702635b14bb7a46b53249209a5e0f999bebf4740945"
+  revision 1
 
   bottle do
     sha256 "6da49d211cf0ffbda15193d77b1ad3a9a269639bc9793a93d86688f7a71e01a5" => :tiger_altivec
@@ -31,11 +12,12 @@ class Gcc6 < Formula
 
   # GCC's Go compiler is not currently supported on Mac OS X.
   # See: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=46986
-  option "with-java", "Build the gcj compiler"
-  option "with-all-languages", "Enable all compilers and languages, except Ada"
+  option 'with-all-languages', 'Build for all supported languages (no Ada or Go), plus JIT'
+  option 'with-check', 'Run the in‐build test suite (very slow; depends on “autogen” & “deja-gnu”)'
+  option "with-java", "Build the gcj compiler (depends on “ecj”)"
+  option "with-jit", "Build the experimental just-in-time compiler"
   option "with-nls", "Build with native language support (localization)"
-  option "with-profiled-build", "Make use of profile guided optimization when bootstrapping GCC"
-  option "with-jit", "Build just-in-time compiler"
+  option "with-profiled-build", "Make use of profile‐guided optimization when bootstrapping GCC"
   option "without-fortran", "Build without the gfortran compiler"
   # enabling multilib on a host that can't run 64-bit results in build failures
   option "without-multilib", "Build without multilib support" if MacOS.prefer_64_bit?
@@ -44,9 +26,15 @@ class Gcc6 < Formula
   depends_on "gmp"
   depends_on "libmpc"
   depends_on "mpfr"
-  depends_on "isl014"
-  depends_on "ecj" if build.with?("java") || build.with?("all-languages")
-
+  depends_on "isl016"
+  if build.with? 'check'
+    depends_on 'autogen'
+    depends_on 'deja-gnu'
+  end
+  if build.with?("java") || build.with?("all-languages")
+    depends_on "ecj"
+    depends_on :x11
+  end
   # The as that comes with Tiger isn't capable of dealing with the
   # PPC asm that comes in libitm
   depends_on "cctools" => :build if MacOS.version < :leopard
@@ -62,7 +50,7 @@ class Gcc6 < Formula
 
   # Fix an Intel-only build failure on 10.4.
   # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=64184
-  patch :DATA if MacOS.version < :leopard && Hardware.cpu_type == :intel
+  patch :DATA if MacOS.version < :leopard && Hardware::CPU.intel?
 
   # Fix for libgccjit.so linkage on Darwin.
   # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=64089
@@ -71,39 +59,85 @@ class Gcc6 < Formula
     sha256 "1e126048d9a6b29b0da04595ffba09c184d338fe963cf9db8d81b47222716bc4"
   end
 
+  # Fix a C++ ABI incompatibility found after GCC6 development ended.
+  # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=87822
+  patch do
+    url 'https://gcc.gnu.org/bugzilla/attachment.cgi?id=44936'
+    sha256 'cce0a9a87002b64cf88e595f1520ccfaff7a4c39ee1905d82d203a1ecdfbda29'
+  end
+
+  # Fix an oversight in the configure script that prevents Java from being built under ppc64 Darwin.
+  patch <<'END_OF_PATCH'
+--- old/configure	2024-06-18 20:51:40.000000000 -0700
++++ new/configure	2024-06-18 21:16:30.000000000 -0700
+@@ -3432,7 +3432,7 @@
+     ;;
+   powerpc*-*-linux*)
+     ;;
+-  powerpc-*-darwin*)
++  powerpc*-*-darwin*)
+     ;;
+   powerpc-*-aix* | rs6000-*-aix*)
+     ;;
+@@ -3459,7 +3459,7 @@
+ 
+ # Disable Java, libgcj or related libraries for some systems.
+ case "${target}" in
+-  powerpc-*-darwin*)
++  powerpc*-*-darwin*)
+     ;;
+   i[3456789]86-*-darwin*)
+     ;;
+END_OF_PATCH
+
   def install
+    def arch
+      case MacOS.preferred_arch
+        when :i386   then 'i686'
+        when :ppc    then 'powerpc'
+        when :ppc64  then 'powerpc64'
+        when :x86_64 then 'x86_64'
+      end
+    end
+
+    def osmajor
+      `uname -r`.chomp
+    end
+
     # GCC will suffer build errors if forced to use a particular linker.
     ENV.delete "LD"
+
     # GCC Bug 25127
     # https://gcc.gnu.org/bugzilla//show_bug.cgi?id=25127
     # ../../../libgcc/unwind.inc: In function '_Unwind_RaiseException':
     # ../../../libgcc/unwind.inc:136:1: internal compiler error: in rs6000_emit_prologue, at config/rs6000/rs6000.c:26535
-    ENV.no_optimization if Hardware::CPU.type == :ppc
+    ENV.no_optimization if Hardware::CPU.ppc?
+
     # Make sure we don't generate STABS data
     # /usr/libexec/gcc/powerpc-apple-darwin8/4.0.1/ld: .libs/libstdc++.lax/libc++98convenience.a/ios_failure.o has both STABS and DWARF debugging info
     # collect2: error: ld returned 1 exit status
     ENV.append_to_cflags "-gstabs0"
-    ENV.append "CXXFLAGS", "-gstabs0"
 
     # Otherwise libstdc++ will be incorrectly tagged with cpusubtype 10 (G4e)
     # https://github.com/mistydemeo/tigerbrew/issues/538
     ENV.append_to_cflags "-force_cpusubtype_ALL" if Hardware::CPU.family == :g3
 
     if MacOS.version < :leopard
-      ENV["AS"] = ENV["AS_FOR_TARGET"] = "#{Formula["cctools"].bin}/as"
+      ENV["AS"] = ENV["AS_FOR_TARGET"] = Formula["cctools"].bin/'as'
     end
 
-    if build.with? "all-languages"
-      # Everything but Ada, which requires a pre-existing GCC Ada compiler
-      # (gnat) to bootstrap. GCC 4.6.0 adds Go as a language option, but it is
-      # currently only compilable on Linux.
-      languages = %w[c c++ fortran java objc obj-c++ jit]
+    # When unspecified, GCC 6’s default set of compilers is C/C++/Fortran/Java/ObjC – plus LTO
+    # (which for some reason is handled as a language), because --enable-lto is on by default.
+    # Always build C/C++ and Objective-C/C++ compilers:
+    languages = %w[c c++ objc obj-c++]
+    # Ada would require a pre-existing GCC Ada compiler (gnat) to bootstrap.
+    # GCC 4.6.0 onward support Go, but gccgo doesn’t build on Darwin.
+    if build.with? 'all-languages'
+      languages << %w[fortran java jit]
     else
-      # C, C++, ObjC compilers are always built
-      languages = %w[c c++ objc obj-c++]
-
       languages << "fortran" if build.with? "fortran"
       languages << "java" if build.with? "java"
+      # Note that the JIT API did not fully stabilize until GCC 11.
       languages << "jit" if build.with? "jit"
     end
 
@@ -119,15 +153,14 @@ class Gcc6 < Formula
       "--with-gmp=#{Formula["gmp"].opt_prefix}",
       "--with-mpfr=#{Formula["mpfr"].opt_prefix}",
       "--with-mpc=#{Formula["libmpc"].opt_prefix}",
-      "--with-isl=#{Formula["isl014"].opt_prefix}",
+      "--with-isl=#{Formula["isl016"].opt_prefix}",
       "--with-system-zlib",
-      "--enable-libstdcxx-time=yes",
-      "--enable-stage1-checking",
-      "--enable-checking=release",
-      "--enable-lto",
-      # A no-op unless --HEAD is built because in head warnings will
-      # raise errors. But still a good idea to include.
+      "--enable-stage1-checking=all",
+#     "--enable-checking=release",  # these are the defaults
+#     "--enable-lto",               #
       "--disable-werror",
+      '--disable-libada',
+      '--enable-default-pie',
       "--with-pkgversion=Tigerbrew #{name} #{pkg_version} #{build.used_options*" "}".strip,
       "--with-bugurl=https://github.com/mistydemeo/tigerbrew/issues",
     ]
@@ -142,13 +175,17 @@ class Gcc6 < Formula
     args << "--with-dwarf2" if MacOS.version <= :mountain_lion
 
     # Use 'bootstrap-debug' build configuration to force stripping of object
-    # files prior to comparison during bootstrap (broken by Xcode 6.3).
-    args << "--with-build-config=bootstrap-debug" if MacOS.version >= :mavericks
+    # files prior to comparison during bootstrap (broken by Xcode 6.3 – OS X
+    # Mavericks and later).
+    build_config = 'bootstrap-debug'  # like "bootstrap" but supposedly faster, and tests more
+    build_config.join ' bootstrap-debug-lib' if build.with? 'check'
+    args << "--with-build-config=#{build_config}"
 
     args << "--disable-nls" if build.without? "nls"
 
     if build.with?("java") || build.with?("all-languages")
       args << "--with-ecj-jar=#{Formula["ecj"].opt_share}/java/ecj.jar"
+      args << '--with-x' << '--enable-java-awt=xlib'
     end
 
     if build.without?("multilib") || !MacOS.prefer_64_bit?
@@ -163,16 +200,15 @@ class Gcc6 < Formula
     # see discussion in https://github.com/Homebrew/homebrew/pull/34303
     inreplace "libgcc/config/t-slibgcc-darwin", "@shlib_slibdir@", "#{HOMEBREW_PREFIX}/lib/gcc/#{version_suffix}"
 
+    unless MacOS::CLT.installed?
+      # For Xcode-only systems, we need to tell the sysroot path.
+      # "native-system-headers" will be appended
+      args << "--with-native-system-header-dir=/usr/include"
+      args << "--with-sysroot=#{MacOS.sdk_path}"
+    end
+
     mkdir "build" do
-      unless MacOS::CLT.installed?
-        # For Xcode-only systems, we need to tell the sysroot path.
-        # "native-system-headers" will be appended
-        args << "--with-native-system-header-dir=/usr/include"
-        args << "--with-sysroot=#{MacOS.sdk_path}"
-      end
-
       system "../configure", *args
-
       if build.with? "profiled-build"
         # Takes longer to build, may bug out. Provided for those who want to
         # optimise all the way to 11.
@@ -180,23 +216,38 @@ class Gcc6 < Formula
       else
         system "make", "bootstrap"
       end
-
-      # At this point `make check` could be invoked to run the testsuite. The
-      # deja-gnu and autogen formulae must be installed in order to do this.
+      ENV.deparallelize do
+        ENV.cccfg_remove 'O'
+        system 'make', 'check'
+        ENV.cccfg_add 'O'
+      end if build.with? 'check'
       system "make", "install"
     end
-
     # Handle conflicts between GCC formulae.
-    # Since GCC 4.8 libffi stuff are no longer shipped.
-    # Rename man7.
-    Dir.glob(man7/"*.7") { |file| add_suffix file, version_suffix }
-
-    # Even when suffixes are appended, the info pages conflict when
-    # install-info is run. Fix this.
-    info.rmtree
-
-    # Since GCC 4.9 java properties are properly sandboxed.
-  end
+    # - (Since GCC 4.8 libffi stuff are no longer shipped.)
+    # - (Since GCC 4.9 java properties are properly sandboxed.)
+    # - Rename man7.
+    Dir.glob(man7/'*.7') { |file| add_suffix(file, version_suffix) }
+    # - As shipped, the info pages conflict when install-info is run because they are not processed
+    #   based solely on filenames.  To fix this, the directory‐menu items in each file need to be
+    #   `inreplace`d with versioned names _in addition_ to versioning the filenames.
+    Dir.glob(info/'*.info') do |file|
+      inreplace file, nil, nil do |s|
+        in_the_zone = false
+        s.each_line do |line|
+          case in_the_zone
+            when false
+              in_the_zone = true if line =~ /START-INFO-DIR-ENTRY/
+              next
+            when true
+              break if line =~ /END-INFO-DIR-ENTRY/
+              line.sub!(/(\*[^(]+\()(.+)(\))/, "#{$1}#{$2}-#{version_suffix})")
+          end # in the zone
+        end # |line|
+      end # |s|
+      add_suffix(file, version_suffix)
+    end # |file|
+  end # install
 
   def add_suffix(file, suffix)
     dir = File.dirname(file)
