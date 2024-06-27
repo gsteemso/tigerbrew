@@ -12,13 +12,13 @@ class Libpsl < Formula
     ENV.universal_binary
 
     args = %W[
-      --disable-dependency-tracking
       --prefix=#{prefix}
+      --disable-dependency-tracking
+      --disable-silent-rules
       --disable-gtk-doc
       --enable-man
       --enable-builtin
     ]
-    args << (ARGV.verbose? ? '--disable-silent-rules' : '--enable-silent-rules')
 
     system './configure', *args
     system 'make'
