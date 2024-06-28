@@ -1,7 +1,7 @@
 class TigerOnly < Requirement
   def message; <<-EOS.undent
-    gcc-4.2 is only provided for Tiger, as it is officially available
-    from an Xcode shipped with Leopard.
+    gcc-4.2 is only provided for Tiger, as build 5577 is officially available
+    with Xcode starting from Leopard.
     EOS
   end
   def satisfied?; MacOS.version == :tiger; end
@@ -20,6 +20,8 @@ class AppleGcc42 < Formula
   depends_on 'gmp'
   depends_on 'mpfr'
 
+  keg_only :provided_by_osx if MacOS.version > :tiger
+
   def install
     args = [
       'RC_OS=macos',
@@ -34,7 +36,7 @@ class AppleGcc42 < Formula
     system 'gnumake', 'install', *args
     doc.install *Dir['build/dst/Developer/Documentation/DocSets/com.apple.ADC_Reference_Library.DeveloperTools.docset/Contents/Resources/Documents/documentation/DeveloperTools/gcc-4.2.1/*']
     bin.install *Dir['build/dst/usr/bin/*']
-    include.install 'build/dst/usr/include/gcc'
+    include.install 'build/dst/usr/include/gcc' if MacOS.version < :leopard
     lib.install 'build/dst/usr/lib/gcc'
     libexec.install 'build/dst/usr/libexec/gcc'
     man.install 'build/dst/usr/share/man/man1'
@@ -46,5 +48,18 @@ class AppleGcc42 < Formula
       last available from Apple’s open‐source distributions).  All compilers have a
       “-4.2” suffix.
     EOS
+  end
+
+  test do
+    (testpath/'hello-c.c').write <<-EOS.undent
+      #include <stdio.h>
+      int main()
+      {
+        puts("Hello, world!");
+        return 0;
+      }
+    EOS
+    system bin/'gcc-4.2', '-o', 'hello-c', 'hello-c.c'
+    assert_equal "Hello, world!\n", `./hello-c`
   end
 end
