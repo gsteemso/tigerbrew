@@ -107,16 +107,17 @@ END_OF_PATCH
     # GCC will suffer build errors if forced to use a particular linker.
     ENV.delete "LD"
 
-    # GCC Bug 25127
-    # https://gcc.gnu.org/bugzilla//show_bug.cgi?id=25127
-    # ../../../libgcc/unwind.inc: In function '_Unwind_RaiseException':
-    # ../../../libgcc/unwind.inc:136:1: internal compiler error: in rs6000_emit_prologue, at config/rs6000/rs6000.c:26535
-    ENV.no_optimization if Hardware::CPU.ppc?
-
-    # Make sure we don't generate STABS data
-    # /usr/libexec/gcc/powerpc-apple-darwin8/4.0.1/ld: .libs/libstdc++.lax/libc++98convenience.a/ios_failure.o has both STABS and DWARF debugging info
-    # collect2: error: ld returned 1 exit status
-    ENV.append_to_cflags "-gstabs0"
+    if ENV.compiler == :gcc_4_0
+      # GCC Bug 25127
+      # https://gcc.gnu.org/bugzilla//show_bug.cgi?id=25127
+      # ../../../libgcc/unwind.inc: In function '_Unwind_RaiseException':
+      # ../../../libgcc/unwind.inc:136:1: internal compiler error: in rs6000_emit_prologue, at config/rs6000/rs6000.c:26535
+      ENV.no_optimization if Hardware::CPU.ppc?
+      # Make sure we don't generate STABS data
+      # /usr/libexec/gcc/powerpc-apple-darwin8/4.0.1/ld: .libs/libstdc++.lax/libc++98convenience.a/ios_failure.o has both STABS and DWARF debugging info
+      # collect2: error: ld returned 1 exit status
+      ENV.append_to_cflags "-gstabs0"
+    end
 
     # Otherwise libstdc++ will be incorrectly tagged with cpusubtype 10 (G4e)
     # https://github.com/mistydemeo/tigerbrew/issues/538
@@ -126,10 +127,14 @@ END_OF_PATCH
       ENV["AS"] = ENV["AS_FOR_TARGET"] = Formula["cctools"].bin/'as'
     end
 
+    # Ensure correct install names when linking against libgcc_s;
+    # see discussion in https://github.com/Homebrew/homebrew/pull/34303
+    inreplace "libgcc/config/t-slibgcc-darwin", "@shlib_slibdir@", "#{HOMEBREW_PREFIX}/lib/gcc/#{version_suffix}"
+
     # When unspecified, GCC 6’s default set of compilers is C/C++/Fortran/Java/ObjC – plus LTO
     # (which for some reason is handled as a language), because --enable-lto is on by default.
-    # Always build C/C++ and Objective-C/C++ compilers:
-    languages = %w[c c++ objc obj-c++]
+    # Always build C/C++ and Objective-C/C++ compilers, with link‐time optimization:
+    languages = %w[c c++ objc obj-c++ lto]
     # Ada would require a pre-existing GCC Ada compiler (gnat) to bootstrap.
     # GCC 4.6.0 onward support Go, but gccgo doesn’t build on Darwin.
     if build.with? 'all-languages'
@@ -158,7 +163,7 @@ END_OF_PATCH
       "--enable-stage1-checking=all",
 #     "--enable-checking=release",  # these are the defaults
 #     "--enable-lto",               #
-      "--disable-werror",
+      "--disable-werror",  # note that “-Werror” is removed by superenv anyway
       '--disable-libada',
       '--enable-default-pie',
       "--with-pkgversion=Tigerbrew #{name} #{pkg_version} #{build.used_options*" "}".strip,
@@ -172,6 +177,7 @@ END_OF_PATCH
     # The pre-Mavericks toolchain requires the older DWARF-2 debugging data
     # format to avoid failure during the stage 3 comparison of object files.
     # See: http://gcc.gnu.org/bugzilla/show_bug.cgi?id=45248
+    # note that “-gdwarf-2” is removed by superenv anyway
     args << "--with-dwarf2" if MacOS.version <= :mountain_lion
 
     # Use 'bootstrap-debug' build configuration to force stripping of object
@@ -195,10 +201,6 @@ END_OF_PATCH
     end
 
     args << "--enable-host-shared" if build.with?("jit") || build.with?("all-languages")
-
-    # Ensure correct install names when linking against libgcc_s;
-    # see discussion in https://github.com/Homebrew/homebrew/pull/34303
-    inreplace "libgcc/config/t-slibgcc-darwin", "@shlib_slibdir@", "#{HOMEBREW_PREFIX}/lib/gcc/#{version_suffix}"
 
     unless MacOS::CLT.installed?
       # For Xcode-only systems, we need to tell the sysroot path.
