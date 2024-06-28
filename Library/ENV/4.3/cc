@@ -4,11 +4,12 @@ $:.unshift Dir["/System/Library/Frameworks/Ruby.framework/Versions/Current/usr/l
 require "pathname"
 require "set"
 
+$:.unshift("#{ENV['HOMEBREW_REPOSITORY']}/Library/Homebrew")
 if RUBY_VERSION < "1.8.7"
-  $:.unshift("#{ENV['HOMEBREW_REPOSITORY']}/Library/Homebrew")
   require 'extend/leopard'
   require 'vendor/backports/enumerator'
 end
+require "os"
 
 class Cmd
   attr_reader :config, :prefix, :cellar, :tmpdir, :sysroot
@@ -206,6 +207,7 @@ class Cmd
     cflag_args.concat(optflags)
     cflag_args.concat(archflags)
     cflag_args << "-std=#{@arg0}" if @arg0 =~ /c[89]9/
+    cflag_args << '-mlongcall' if OS.mac? and MacOS.prefer_64_bit?
     cflag_args
   end
 
