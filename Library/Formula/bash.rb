@@ -14,6 +14,8 @@ class Bash < Formula
 
   depends_on "readline"
 
+  patch :DATA
+
   def install
     # When built with SSH_SOURCE_BASHRC, bash will source ~/.bashrc when
     # it's non-interactively from sshd.  This allows the user to set
@@ -23,7 +25,7 @@ class Bash < Formula
     # Homebrew's bash instead of /bin/bash.
     ENV.append_to_cflags "-DSSH_SOURCE_BASHRC"
 
-    system "./configure", "--prefix=#{prefix}"
+    system "./configure", "--prefix=#{prefix}", "--with-installed-readline=#{Formula['readline'].opt_prefix}"
     system "make", "install"
   end
 
@@ -37,3 +39,17 @@ class Bash < Formula
     assert_equal "hello", shell_output("#{bin}/bash -c \"echo hello\"").strip
   end
 end
+
+__END__
+--- old/examples/loadables/getconf.c	2024-06-27 21:42:56.000000000 -0700
++++ new/examples/loadables/getconf.c	2024-06-27 21:42:34.000000000 -0700
+@@ -271,7 +271,9 @@
+ #endif
+     { "_NPROCESSORS_CONF", _SC_NPROCESSORS_CONF, SYSCONF },
+     { "_NPROCESSORS_ONLN", _SC_NPROCESSORS_ONLN, SYSCONF },
++#ifdef _SC_PHYS_PAGES
+     { "_PHYS_PAGES", _SC_PHYS_PAGES, SYSCONF },
++#endif
+ #ifdef _SC_ARG_MAX
+     { "_POSIX_ARG_MAX", _SC_ARG_MAX, SYSCONF },
+ #else
