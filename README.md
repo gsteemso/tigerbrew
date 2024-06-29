@@ -6,11 +6,11 @@ A fork of [Tigerbrew][tigerbrew], itself a fork of [Homebrew][homebrew], that fo
 Installation
 ============
 
-You will first need the newest version of Xcode for your operating system installed. For Tiger that’s [Xcode 2.5, available from Apple here](https://developer.apple.com/download/more/?=xcode%202.5). For Leopard, [Xcode 3.1.4, available from Apple here](https://developer.apple.com/download/more/?=xcode%203.1.4). Both downloads will require an Apple Developer account.
+You will first need the newest version of Xcode compatible with your operating system installed. For Tiger that’s [Xcode 2.5, available from Apple here](https://developer.apple.com/download/more/?=xcode%202.5). For Leopard, [Xcode 3.1.4, available from Apple here](https://developer.apple.com/download/more/?=xcode%203.1.4). Both downloads will require an Apple Developer account.
 
 On the computer you’re reading this on, control or right click this link and save it (the option will be something like “Save Link As” or “Download Linked File”, depending on your browser) to disk:
 
-<https://raw.github.com/gsteemso/tigerbrew/go/install>
+<https://raw.github.com/gsteemso/leopardbrew/go/install>
 
 (It used to be possible to instead use TenFourFox directly from the target machine, but that software is no longer maintained and is now unable to handle most pages on Github.)
 
@@ -43,7 +43,7 @@ Run these commands from your terminal. You must have git installed.
 
 ```
 cd `brew --repository`
-git remote set-url origin https://github.com/gsteemso/tigerbrew.git
+git remote set-url origin https://github.com/gsteemso/leopardbrew.git
 git fetch origin
 git reset --hard origin/master
 ```
@@ -63,10 +63,10 @@ Code is under the [BSD 2 Clause (NetBSD) license][license].
 
 [Tigerbrew]:https://github.com/mistydemeo/tigerbrew
 [Homebrew]:http://brew.sh
-[formula]:https://github.com/gsteemso/tigerbrew/tree/master/Library/Formula
-[issues]:https://github.com/gsteemso/tigerbrew/issues
-[prs]:https://github.com/gsteemso/tigerbrew/pulls
+[formula]:https://github.com/gsteemso/leopardbrew/tree/master/Library/Formula
+[issues]:https://github.com/gsteemso/leopardbrew/issues
+[prs]:https://github.com/gsteemso/leopardbrew/pulls
 [mxcl]:http://twitter.com/mxcl
 [mistydemeo]:https://github.com/mistydemeo
 [gsteemso]:https://github.com/gsteemso
-[license]:https://github.com/gsteemso/tigerbrew/blob/master/LICENSE.txt
+[license]:https://github.com/gsteemso/leopardbrew/blob/master/LICENSE.txt
