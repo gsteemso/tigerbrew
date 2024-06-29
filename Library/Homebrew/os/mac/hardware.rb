@@ -1,5 +1,4 @@
 require "mach"
-require 'utils/popen'
 
 module MacCPUs
   OPTIMIZATION_FLAGS = {
