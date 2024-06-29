@@ -96,40 +96,38 @@ class DependencyCollector
 
   def parse_symbol_spec(spec, tags)
     case spec
-    when :x11        then X11Requirement.new(spec.to_s, tags)
-    when :xcode      then XcodeRequirement.new(tags)
-    when :macos      then MinimumMacOSRequirement.new(tags)
-    when :mysql      then MysqlRequirement.new(tags)
-    when :postgresql then PostgresqlRequirement.new(tags)
-    when :gpg        then GPGRequirement.new(tags)
-    when :fortran    then FortranRequirement.new(tags)
-    when :mpi        then MPIRequirement.new(*tags)
-    when :tex        then TeXRequirement.new(tags)
-    when :arch       then ArchRequirement.new(tags)
-    when :hg         then MercurialRequirement.new(tags)
-    when :python     then PythonRequirement.new(tags)
-    when :python3    then Python3Requirement.new(tags)
-    when :java       then JavaRequirement.new(tags)
-    when :ruby       then RubyRequirement.new(tags)
-    when :osxfuse    then OsxfuseRequirement.new(tags)
-    when :tuntap     then TuntapRequirement.new(tags)
     when :ant        then ant_dep(spec, tags)
     when :apr        then AprRequirement.new(tags)
+    when :arch       then ArchRequirement.new(tags)
+    when :cxx11      then Cxx11Requirement.new(tags)
     when :emacs      then EmacsRequirement.new(tags)
-    # Tiger's ld is too old to properly link some software
-    when :ld64       then LD64Dependency.new if MacOS.version < :leopard
-    when :clt # deprecated
+    when :expat      then Dependency.new('expat', tags) if MacOS.version < :leopard
+    when :fortran    then FortranRequirement.new(tags)
+    when :gpg        then GPGRequirement.new(tags)
+    when :hg         then MercurialRequirement.new(tags)
+    when :java       then JavaRequirement.new(tags)
+    # Tiger’s, and sometimes Leopard’s, ld are too old to properly link some software
+    when :ld64       then LD64Dependency.new if MacOS.version <= :leopard
+    when :macos      then MinimumMacOSRequirement.new(tags)
+    when :mpi        then MPIRequirement.new(*tags)
+    when :mysql      then MysqlRequirement.new(tags)
+    when :osxfuse    then OsxfuseRequirement.new(tags)
+    when :postgresql then PostgresqlRequirement.new(tags)
+    when :python, :python2 then PythonRequirement.new(tags)
+    when :python3    then Python3Requirement.new(tags)
+    when :ruby       then RubyRequirement.new(tags)
+    when :tex        then TeXRequirement.new(tags)
+    when :tuntap     then TuntapRequirement.new(tags)
+    when :x11        then X11Requirement.new(spec.to_s, tags)
+    when :xcode      then XcodeRequirement.new(tags)
     when :autoconf, :automake, :bsdmake, :libtool # deprecated
       autotools_dep(spec, tags)
     when :cairo, :fontconfig, :freetype, :libpng, :pixman # deprecated
       Dependency.new(spec.to_s, tags)
-    when :expat
-      Dependency.new('expat', tags) if MacOS.version < :leopard
+    when :clt # deprecated
     when :libltdl # deprecated
       tags << :run
       Dependency.new("libtool", tags)
-    when :python2
-      PythonRequirement.new(tags)
     else
       raise ArgumentError, "Unsupported special dependency #{spec.inspect}"
     end
